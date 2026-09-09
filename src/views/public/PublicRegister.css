@@ -1,0 +1,456 @@
+/* Isolated Scoped CSS for PublicRegister screen */
+.public-register-wrapper {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .public-register-wrapper {
+    padding: 16px 12px;
+  }
+}
+
+.public-register-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 640px) {
+  .public-register-back-btn {
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+.public-register-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+@media (max-width: 640px) {
+  .public-register-header {
+    margin-bottom: 24px;
+  }
+}
+
+.public-register-step-pill {
+  margin-bottom: 12px;
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.public-register-title {
+  font-size: 32px;
+  letter-spacing: -0.8px;
+  margin-bottom: 8px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .public-register-title {
+    font-size: 24px;
+    letter-spacing: -0.5px;
+  }
+}
+
+.public-register-subtitle {
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .public-register-subtitle {
+    font-size: 13px;
+  }
+}
+
+/* Responsive Form Layout Grid */
+.public-register-form-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .public-register-form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Cards Responsive Padding */
+.public-register-card.public-register-form-card {
+  padding: 36px;
+}
+
+.public-register-card.public-register-summary-card {
+  padding: 28px;
+  position: sticky;
+  top: 20px;
+}
+
+@media (max-width: 900px) {
+  .public-register-card.public-register-summary-card {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .public-register-card.public-register-form-card {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+  .public-register-card.public-register-summary-card {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+}
+
+.public-register-fields-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 640px) {
+  .public-register-fields-stack {
+    gap: 18px;
+  }
+}
+
+.public-register-field-group {
+  width: 100%;
+}
+
+.public-register-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.public-register-label-hint {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.public-register-sublabel {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.public-register-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.public-register-input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.public-register-input {
+  padding-left: 48px !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.public-register-input-pass {
+  padding-right: 48px !important;
+}
+
+.public-register-eye-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Phone input row */
+.public-register-phone-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.public-register-phone-code-wrapper {
+  width: 125px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.public-register-phone-num-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.public-register-phone-select {
+  padding-right: 10px;
+  padding-left: 14px;
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 400px) {
+  .public-register-phone-code-wrapper {
+    width: 110px;
+  }
+}
+
+.public-register-error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Password Box */
+.public-register-password-box {
+  background: rgba(63, 131, 248, 0.04);
+  border: 1px solid rgba(63, 131, 248, 0.18);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .public-register-password-box {
+    padding: 16px 14px;
+    gap: 14px;
+    border-radius: 14px;
+  }
+}
+
+.public-register-password-box-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e429f;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.public-register-password-hint {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.public-register-email-highlight {
+  color: #1e429f;
+  word-break: break-all;
+}
+
+/* Consent Checkbox */
+.public-register-consent-group {
+  width: 100%;
+}
+
+.public-register-consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.public-register-checkbox-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.public-register-consent-text {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+}
+
+.public-register-legal-link {
+  color: #3f83f8;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* Buttons and Submit Containers */
+.public-register-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.05);
+  margin: 10px 0;
+}
+
+.public-register-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 20px;
+  width: 100%;
+}
+
+/* Submit container visibility */
+.public-register-desktop-submit-container {
+  display: block;
+}
+
+.public-register-mobile-submit-container {
+  display: none;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .public-register-desktop-submit-container {
+    display: none;
+  }
+  .public-register-mobile-submit-container {
+    display: block;
+  }
+}
+
+/* Summary Card Content */
+.public-register-summary-title {
+  font-size: 20px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  padding-bottom: 10px;
+}
+
+@media (max-width: 640px) {
+  .public-register-summary-title {
+    font-size: 18px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+  }
+}
+
+.public-register-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.public-register-summary-label {
+  font-size: 12px;
+  color: #4b5563;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.public-register-summary-course {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+  color: #111827;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.public-register-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 360px) {
+  .public-register-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.public-register-summary-val {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.public-register-summary-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.4);
+  margin: 8px 0;
+}
+
+.public-register-summary-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.public-register-summary-total-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.public-register-summary-price {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: #1e429f;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 360px) {
+  .public-register-summary-price {
+    font-size: 24px;
+  }
+}
+
+.public-register-summary-badge {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.4);
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.public-register-shield-icon {
+  color: #3f83f8;
+  flex-shrink: 0;
+}
+
+.public-register-shield-text {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.3;
+}
