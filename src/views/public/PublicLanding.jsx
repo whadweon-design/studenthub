@@ -189,30 +189,39 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
         </p>
 
         <div className="public-landing-sessions-list">
-          {settings.sessions.map((session, index) => {
-            const hasDateConfig = session.date !== '';
-            return (
-              <GlassCard 
-                key={session.id} 
-                tint={index % 2 === 0 ? 'mint' : 'blue'}
-                className="public-landing-session-card"
-              >
-                <div>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: index % 2 === 0 ? '#14532d' : '#1e429f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {session.name} — {session.day}
-                  </span>
-                  <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{session.title}</h3>
-                  <p style={{ fontSize: '14px', color: '#4b5563' }}>Duración: 1h 30m · Materiales e IA aplicados</p>
-                </div>
-                
-                <div className="glass-panel" style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
-                    {hasDateConfig ? `${session.date} a las ${session.time}` : 'Fecha por confirmar'}
-                  </span>
-                </div>
-              </GlassCard>
-            );
-          })}
+          {(() => {
+            const OFFICIAL_TITLES = [
+              'Descubriendo la IA: ¿Qué es y cómo funciona en realidad',
+              'Ingeniería de Prompts para Estudiantes: Estudia y Trabaja',
+              'Creatividad Digital: Generación de Imágenes y Presentaciones',
+              'El Futuro y Tu Proyecto Final: La IA en la Vida Profesional'
+            ];
+            return settings.sessions.map((session, index) => {
+              const hasDateConfig = session.date !== '';
+              const officialTitle = OFFICIAL_TITLES[index] || session.title;
+              return (
+                <GlassCard 
+                  key={session.id} 
+                  tint={index % 2 === 0 ? 'mint' : 'blue'}
+                  className="public-landing-session-card"
+                >
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: index % 2 === 0 ? '#14532d' : '#1e429f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {session.name} — {session.day}
+                    </span>
+                    <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{officialTitle}</h3>
+                    <p style={{ fontSize: '14px', color: '#4b5563' }}>Duración: 1h 30m · Materiales e IA aplicados</p>
+                  </div>
+                  
+                  <div className="glass-panel" style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
+                      {hasDateConfig ? `${session.date} a las ${session.time}` : 'Fecha por confirmar'}
+                    </span>
+                  </div>
+                </GlassCard>
+              );
+            });
+          })()}
         </div>
       </div>
 
