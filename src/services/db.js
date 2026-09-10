@@ -40,10 +40,10 @@ const DEFAULT_SETTINGS = {
   bankConcept: 'Nombre Completo del Alumno',
   whatsappNumber: '5641439566', // Real WhatsApp administrativio
   sessions: [
-    { id: '1', name: 'Sesión 01', title: 'Fundamentos de IA y Búsqueda Inteligente', day: 'Lunes', date: '', time: '', status: 'Finalizada', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', meetLink: '', presentationUrl: '#', activities: [{ title: 'Actividad 1: Búsqueda Avanzada', desc: 'Configura consultas de búsqueda con operadores booleanos e IA.', file: 'actividad_01.pdf', status: 'Entregada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
-    { id: '2', name: 'Sesión 02', title: 'Automatización con IA en Investigación', day: 'Miércoles', date: '', time: '', status: 'Finalizada', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', meetLink: '', presentationUrl: '#', activities: [{ title: 'Actividad 2: Extracción de Papers', desc: 'Usa herramientas de curación científica para resumir 3 artículos.', file: 'actividad_02.pdf', status: 'Entregada' }], resources: [{ name: 'Plantilla de Lectura Crítica', type: 'DOCX' }] },
-    { id: '3', name: 'Sesión 03', title: 'Redacción Académica y Curación de Textos', day: 'Viernes', date: '', time: '', status: 'Finalizada', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', meetLink: '', presentationUrl: '#', activities: [{ title: 'Actividad 3: Reescritura Científica', desc: 'Aplica prompts de reformulación y evita el plagio por IA.', file: 'actividad_03.pdf', status: 'Pendiente' }], resources: [{ name: 'Tabla de Prompts de Edición', type: 'PDF' }] },
-    { id: '4', name: 'Sesión 04', title: 'Diseño de Presentaciones de Alto Impacto', day: 'Lunes siguiente', date: '', time: '', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-defg-hij', presentationUrl: '', activities: [{ title: 'Proyecto Final', desc: 'Crea una presentación ejecutiva usando las herramientas aprendidas.', file: '', status: 'No iniciada' }], resources: [{ name: 'Banco de Recursos de Diseño', type: 'Web' }] }
+    { id: '1', name: 'Sesión 01', title: 'Descubriendo la IA: ¿Qué es y cómo funciona en realidad', day: 'Lunes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 1: Exploración e Introducción', desc: 'Configura tus primeras consultas de Inteligencia Artificial.', file: 'actividad_01.pdf', status: 'No iniciada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
+    { id: '2', name: 'Sesión 02', title: 'Ingeniería de Prompts para Estudiantes: Estudia y Trabaja', day: 'Miércoles', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 2: Estructuración de Prompts Avanzados', desc: 'Aplica plantillas de investigación y resumen.', file: 'actividad_02.pdf', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Prompts', type: 'DOCX' }] },
+    { id: '3', name: 'Sesión 03', title: 'Creatividad Digital: Generación de Imágenes y Presentaciones', day: 'Viernes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 3: Creación de Material Visual', desc: 'Genera gráficos e imágenes para tus proyectos.', file: 'actividad_03.pdf', status: 'No iniciada' }], resources: [{ name: 'Banco de Herramientas de IA Visual', type: 'PDF' }] },
+    { id: '4', name: 'Sesión 04', title: 'El Futuro y Tu Proyecto Final: La IA en la Vida Profesional', day: 'Lunes siguiente', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '', activities: [{ title: 'Proyecto Final', desc: 'Presenta tu proyecto académico integrando IA.', file: '', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Presentación Final', type: 'Web' }] }
   ]
 };
 
@@ -88,26 +88,19 @@ export const initDB = () => {
   } else {
     try {
       const parsed = JSON.parse(existingSettings);
-      // Migrate from old mock values to actual real values if placeholder values exist
-      if (
-        !parsed.bankBeneficiary ||
-        parsed.bankName === 'Banco del Futuro (BBVA)' ||
-        parsed.bankBeneficiary === 'Academia Virtual S.A. de C.V.' ||
-        parsed.bankClabe === '0121 8001 2345 6789 01' ||
-        parsed.whatsappNumber === '+525512345678'
-      ) {
-        const updated = {
-          ...parsed,
-          bankName: DEFAULT_SETTINGS.bankName,
-          bankBeneficiary: DEFAULT_SETTINGS.bankBeneficiary,
-          bankClabe: DEFAULT_SETTINGS.bankClabe,
-          bankAccount: DEFAULT_SETTINGS.bankAccount,
-          bankConcept: DEFAULT_SETTINGS.bankConcept,
-          price: DEFAULT_SETTINGS.price,
-          whatsappNumber: DEFAULT_SETTINGS.whatsappNumber
-        };
-        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
-      }
+      // Always ensure sessions have the latest official syllabus titles
+      const updated = {
+        ...parsed,
+        sessions: DEFAULT_SETTINGS.sessions,
+        bankName: DEFAULT_SETTINGS.bankName,
+        bankBeneficiary: DEFAULT_SETTINGS.bankBeneficiary,
+        bankClabe: DEFAULT_SETTINGS.bankClabe,
+        bankAccount: DEFAULT_SETTINGS.bankAccount,
+        bankConcept: DEFAULT_SETTINGS.bankConcept,
+        price: DEFAULT_SETTINGS.price,
+        whatsappNumber: DEFAULT_SETTINGS.whatsappNumber
+      };
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
     } catch (e) {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
