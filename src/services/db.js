@@ -2,7 +2,7 @@
 // Simulates a full backend database with persistence in the browser.
 
 const STORAGE_KEYS = {
-  SETTINGS: 'aula_settings',
+  SETTINGS: 'aula_settings_v3',
   ENROLLMENTS: 'aula_enrollments',
   USERS: 'aula_users',
   COURSES: 'aula_courses',
