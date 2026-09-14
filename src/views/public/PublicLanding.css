@@ -103,9 +103,9 @@
 }
 
 .public-landing-hero-title {
-  font-size: calc(1.8rem + 1.5vw);
-  line-height: 1.15;
-  margin-bottom: 20px;
+  font-size: calc(2.2rem + 1.8vw);
+  line-height: 1.1;
+  margin-bottom: 12px;
   color: #111827;
   letter-spacing: -1.5px;
   word-break: break-word;
@@ -114,10 +114,28 @@
 
 @media (max-width: 640px) {
   .public-landing-hero-title {
-    font-size: calc(1.6rem + 1.2vw);
-    line-height: 1.2;
-    margin-bottom: 16px;
+    font-size: calc(1.8rem + 1.4vw);
+    line-height: 1.15;
+    margin-bottom: 10px;
     letter-spacing: -0.8px;
+  }
+}
+
+.public-landing-hero-subtitle {
+  font-size: calc(1.1rem + 0.5vw);
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1f2937;
+  margin-bottom: 18px;
+  letter-spacing: -0.4px;
+  word-break: break-word;
+}
+
+@media (max-width: 640px) {
+  .public-landing-hero-subtitle {
+    font-size: 16px;
+    line-height: 1.4;
+    margin-bottom: 14px;
   }
 }
 

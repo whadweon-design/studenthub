@@ -63,10 +63,13 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
             NUEVA EDICIÓN REGISTROS ABIERTOS
           </span>
           <h1 className="public-landing-hero-title">
-            {settings.courseName}
+            LEVEL UP
           </h1>
+          <h2 className="public-landing-hero-subtitle">
+            Potencia tu forma de estudiar, crear y trabajar con IA.
+          </h2>
           <p className="public-landing-hero-desc">
-            {settings.courseDescription}
+            Un curso práctico para estudiantes que quieren descubrir cómo utilizar la Inteligencia Artificial para aprender mejor, desarrollar ideas, crear contenido y prepararse para el mundo profesional.
           </p>
 
           <div className="public-landing-cta-group">

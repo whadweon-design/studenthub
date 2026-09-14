@@ -30,8 +30,8 @@ export const clearActiveCheckout = () => {
 
 // Initial Default Configurations
 const DEFAULT_SETTINGS = {
-  courseName: 'IA para estudiantes: de una idea a un proyecto académico',
-  courseDescription: 'Curso práctico dirigido principalmente a estudiantes y jóvenes universitarios interesados en aprender a utilizar herramientas de Inteligencia Artificial para facilitar y mejorar sus proyectos académicos.',
+  courseName: 'LEVEL UP',
+  courseDescription: 'Un curso práctico para estudiantes que quieren descubrir cómo utilizar la Inteligencia Artificial para aprender mejor, desarrollar ideas, crear contenido y prepararse para el mundo profesional.',
   price: 499,
   bankName: 'BBVA (Bancomer)',
   bankBeneficiary: 'Carlos Eduardo Ramirez Salas',
