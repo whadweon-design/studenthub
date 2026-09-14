@@ -193,15 +193,27 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
 
         <div className="public-landing-sessions-list">
           {(() => {
-            const OFFICIAL_TITLES = [
-              'Descubriendo la IA: ¿Qué es y cómo funciona en realidad',
-              'Ingeniería de Prompts para Estudiantes: Estudia y Trabaja',
-              'Creatividad Digital: Generación de Imágenes y Presentaciones',
-              'El Futuro y Tu Proyecto Final: La IA en la Vida Profesional'
+            const OFFICIAL_SESSIONS = [
+              {
+                title: 'IA desde Cero: Entiende lo que Hay Detrás',
+                description: 'Qué es la IA, cómo funciona y qué puede hacer realmente.'
+              },
+              {
+                title: 'Habla con la IA: El Poder de los Prompts',
+                description: 'Ingeniería de prompts aplicada al estudio y trabajo.'
+              },
+              {
+                title: 'De Ideas a Creaciones: IA para Crear en Digital',
+                description: 'Imágenes, presentaciones y creatividad.'
+              },
+              {
+                title: 'Tu Próximo Paso: IA, Profesión y Proyecto Final',
+                description: 'Aplicación profesional, futuro de la IA y proyecto.'
+              }
             ];
             return settings.sessions.map((session, index) => {
               const hasDateConfig = session.date !== '';
-              const officialTitle = OFFICIAL_TITLES[index] || session.title;
+              const officialInfo = OFFICIAL_SESSIONS[index] || { title: session.title, description: 'Duración: 1h 30m · Materiales e IA aplicados' };
               return (
                 <GlassCard 
                   key={session.id} 
@@ -212,8 +224,8 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
                     <span style={{ fontSize: '13px', fontWeight: 600, color: index % 2 === 0 ? '#14532d' : '#1e429f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {session.name} — {session.day}
                     </span>
-                    <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{officialTitle}</h3>
-                    <p style={{ fontSize: '14px', color: '#4b5563' }}>Duración: 1h 30m · Materiales e IA aplicados</p>
+                    <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{officialInfo.title}</h3>
+                    <p style={{ fontSize: '14px', color: '#4b5563' }}>{officialInfo.description}</p>
                   </div>
                   
                   <div className="glass-panel" style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>

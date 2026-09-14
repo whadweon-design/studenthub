@@ -2,7 +2,7 @@
 // Simulates a full backend database with persistence in the browser.
 
 const STORAGE_KEYS = {
-  SETTINGS: 'aula_settings_v3',
+  SETTINGS: 'aula_settings_v5',
   ENROLLMENTS: 'aula_enrollments',
   USERS: 'aula_users',
   COURSES: 'aula_courses',
@@ -40,10 +40,10 @@ const DEFAULT_SETTINGS = {
   bankConcept: 'Nombre Completo del Alumno',
   whatsappNumber: '5641439566', // Real WhatsApp administrativio
   sessions: [
-    { id: '1', name: 'Sesión 01', title: 'Descubriendo la IA: ¿Qué es y cómo funciona en realidad', day: 'Lunes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 1: Exploración e Introducción', desc: 'Configura tus primeras consultas de Inteligencia Artificial.', file: 'actividad_01.pdf', status: 'No iniciada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
-    { id: '2', name: 'Sesión 02', title: 'Ingeniería de Prompts para Estudiantes: Estudia y Trabaja', day: 'Miércoles', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 2: Estructuración de Prompts Avanzados', desc: 'Aplica plantillas de investigación y resumen.', file: 'actividad_02.pdf', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Prompts', type: 'DOCX' }] },
-    { id: '3', name: 'Sesión 03', title: 'Creatividad Digital: Generación de Imágenes y Presentaciones', day: 'Viernes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 3: Creación de Material Visual', desc: 'Genera gráficos e imágenes para tus proyectos.', file: 'actividad_03.pdf', status: 'No iniciada' }], resources: [{ name: 'Banco de Herramientas de IA Visual', type: 'PDF' }] },
-    { id: '4', name: 'Sesión 04', title: 'El Futuro y Tu Proyecto Final: La IA en la Vida Profesional', day: 'Lunes siguiente', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '', activities: [{ title: 'Proyecto Final', desc: 'Presenta tu proyecto académico integrando IA.', file: '', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Presentación Final', type: 'Web' }] }
+    { id: '1', name: 'Sesión 01', title: 'IA desde Cero: Entiende lo que Hay Detrás', description: 'Qué es la IA, cómo funciona y qué puede hacer realmente.', day: 'Lunes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 1: Exploración e Introducción', desc: 'Configura tus primeras consultas de Inteligencia Artificial.', file: 'actividad_01.pdf', status: 'No iniciada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
+    { id: '2', name: 'Sesión 02', title: 'Habla con la IA: El Poder de los Prompts', description: 'Ingeniería de prompts aplicada al estudio y trabajo.', day: 'Miércoles', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 2: Estructuración de Prompts Avanzados', desc: 'Aplica plantillas de investigación y resumen.', file: 'actividad_02.pdf', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Prompts', type: 'DOCX' }] },
+    { id: '3', name: 'Sesión 03', title: 'De Ideas a Creaciones: IA para Crear en Digital', description: 'Imágenes, presentaciones y creatividad.', day: 'Viernes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 3: Creación de Material Visual', desc: 'Genera gráficos e imágenes para tus proyectos.', file: 'actividad_03.pdf', status: 'No iniciada' }], resources: [{ name: 'Banco de Herramientas de IA Visual', type: 'PDF' }] },
+    { id: '4', name: 'Sesión 04', title: 'Tu Próximo Paso: IA, Profesión y Proyecto Final', description: 'Aplicación profesional, futuro de la IA y proyecto.', day: 'Lunes siguiente', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '', activities: [{ title: 'Proyecto Final', desc: 'Presenta tu proyecto académico integrando IA.', file: '', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Presentación Final', type: 'Web' }] }
   ]
 };
 
