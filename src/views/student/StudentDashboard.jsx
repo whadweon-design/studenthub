@@ -19,6 +19,11 @@ const StudentDashboard = ({
   // Find next session that is not finished
   const nextSession = settings.sessions.find(s => s.status !== 'Finalizada') || settings.sessions[3];
 
+  // Dynamic real counts for Biblioteca (no hardcoded mock numbers)
+  const presentacionesCount = settings.sessions.filter(s => s.status === 'Finalizada' && s.presentationUrl && s.presentationUrl !== '#' && s.presentationUrl !== '').length;
+  const plantillasCount = settings.sessions.reduce((acc, s) => acc + (s.resources ? s.resources.filter(r => r.type === 'DOCX' || r.type === 'XLSX').length : 0), 0);
+  const grabacionesCount = settings.sessions.filter(s => s.youtubeUrl && s.youtubeUrl.trim() !== '').length;
+
   const getCourseProgress = (courseId) => {
     return user.progress?.[courseId] !== undefined ? user.progress[courseId] : 50;
   };
@@ -146,6 +151,56 @@ const StudentDashboard = ({
             </div>
           </GlassCard>
 
+          {/* Sesiones del curso Section - Acceso Directo a las 4 Sesiones */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '20px', letterSpacing: '-0.3px', fontWeight: 700 }}>
+                Sesiones del curso
+              </h3>
+              <span className="glass-pill blue" style={{ pointerEvents: 'none', fontSize: '11px' }}>
+                4 Sesiones disponibles
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+              {settings.sessions.map((session) => (
+                <GlassCard 
+                  key={session.id} 
+                  tint={session.status === 'En vivo' ? 'blue' : session.status === 'Finalizada' ? 'mint' : 'neutral'}
+                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '22px', minHeight: '190px' }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#6b7280' }}>
+                        {session.name} — {session.day}
+                      </span>
+                      <span className="glass-pill" style={{ padding: '2px 8px', fontSize: '10px', pointerEvents: 'none', background: session.status === 'En vivo' ? 'rgba(63, 131, 248, 0.2)' : session.status === 'Finalizada' ? 'rgba(49, 196, 141, 0.2)' : 'rgba(255,255,255,0.6)', border: 'none', color: session.status === 'En vivo' ? '#1e429f' : session.status === 'Finalizada' ? '#03543f' : '#374151' }}>
+                        {session.status}
+                      </span>
+                    </div>
+                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', lineHeight: 1.3, marginBottom: '6px' }}>
+                      {session.title}
+                    </h4>
+                    <p style={{ fontSize: '12px', color: '#4b5563', margin: 0, lineHeight: 1.4 }}>
+                      {session.description}
+                    </p>
+                  </div>
+
+                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '12px' }}>
+                    <button 
+                      onClick={() => onSelectSession(session)}
+                      className={`glass-pill ${session.status === 'En vivo' ? 'blue' : session.status === 'Finalizada' ? 'mint' : 'secondary'}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px 16px', fontWeight: 600 }}
+                    >
+                      <span>Entrar a la sesión</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
+          </div>
+
           {/* Mobile Display of side cards (shows underneath main hero in tablet/mobile) */}
           <div className="mobile-only-grid" style={{ display: 'none', gap: '16px' }}>
             <style>{`
@@ -200,15 +255,15 @@ const StudentDashboard = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '4px' }}>
                   <span style={{ color: '#4b5563' }}>Presentaciones</span>
-                  <span style={{ fontWeight: 700 }}>24</span>
+                  <span style={{ fontWeight: 700 }}>{presentacionesCount}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '4px' }}>
                   <span style={{ color: '#4b5563' }}>Plantillas</span>
-                  <span style={{ fontWeight: 700 }}>18</span>
+                  <span style={{ fontWeight: 700 }}>{plantillasCount}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                   <span style={{ color: '#4b5563' }}>Grabaciones</span>
-                  <span style={{ fontWeight: 700 }}>32</span>
+                  <span style={{ fontWeight: 700 }}>{grabacionesCount}</span>
                 </div>
               </div>
             </GlassCard>
@@ -339,15 +394,21 @@ const StudentDashboard = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '6px' }}>
                 <span style={{ color: '#4b5563' }}>Presentaciones</span>
-                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>24</span>
+                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>
+                  {presentacionesCount}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '6px' }}>
                 <span style={{ color: '#4b5563' }}>Plantillas</span>
-                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>18</span>
+                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>
+                  {plantillasCount}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                 <span style={{ color: '#4b5563' }}>Grabaciones</span>
-                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>32</span>
+                <span className="glass-panel" style={{ padding: '2px 8px', borderRadius: '8px', fontSize: '11px', background: 'rgba(255,255,255,0.5)', border: 'none', fontWeight: 700 }}>
+                  {grabacionesCount}
+                </span>
               </div>
             </div>
 

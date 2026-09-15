@@ -273,7 +273,7 @@ function App() {
                 onSelectSession={handleSelectSession}
               />
             ) : (
-              <StudentLibrary />
+              <StudentLibrary settings={settings} />
             )}
           </div>
         )}

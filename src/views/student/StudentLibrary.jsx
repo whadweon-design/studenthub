@@ -4,43 +4,74 @@ import GlassPill from '../../components/GlassPill';
 import { 
   Search, FileText, Download, Link as LinkIcon, Video, CheckSquare, Award, BookOpen
 } from 'lucide-react';
+import { getSettings } from '../../services/db';
 
-const LIBRARY_RESOURCES = [
-  // Presentaciones
-  { id: 'p1', name: 'Presentación Sesión 01: Fundamentos de IA', category: 'Presentaciones', type: 'PDF', size: '4.8 MB', course: 'IA aplicada al trabajo' },
-  { id: 'p2', name: 'Presentación Sesión 02: Prompt Engineering', category: 'Presentaciones', type: 'PDF', size: '5.2 MB', course: 'IA aplicada al trabajo' },
-  { id: 'p3', name: 'Presentación Sesión 03: Redacción Académica', category: 'Presentaciones', type: 'PDF', size: '3.9 MB', course: 'IA aplicada al trabajo' },
-  { id: 'p4', name: 'Presentación Sesión 04: Presentaciones de Impacto', category: 'Presentaciones', type: 'PDF', size: '6.1 MB', course: 'IA aplicada al trabajo' },
-  { id: 'p5', name: 'Presentación: Introducción a Organización Digital', category: 'Presentaciones', type: 'PDF', size: '2.4 MB', course: 'Organización digital' },
-  // Plantillas
-  { id: 'pl1', name: 'Plantilla de Lectura Crítica Científica', category: 'Plantillas', type: 'DOCX', size: '1.2 MB', course: 'IA aplicada al trabajo' },
-  { id: 'pl2', name: 'Ficha de Resumen por IA para Proyectos', category: 'Plantillas', type: 'XLSX', size: '840 KB', course: 'IA aplicada al trabajo' },
-  { id: 'pl3', name: 'Plantilla de Prompts de Edición y Estilo', category: 'Plantillas', type: 'PDF', size: '340 KB', course: 'IA aplicada al trabajo' },
-  { id: 'pl4', name: 'Calendario Editorial / Proyecto Académico', category: 'Plantillas', type: 'Notion', size: 'Link', course: 'Organización digital' },
-  // Grabaciones
-  { id: 'g1', name: 'Grabación Sesión 01: Búsqueda Avanzada', category: 'Grabaciones', type: 'Video', size: '1h 32m', course: 'IA aplicada al trabajo' },
-  { id: 'g2', name: 'Grabación Sesión 02: Curación Científica', category: 'Grabaciones', type: 'Video', size: '1h 28m', course: 'IA aplicada al trabajo' },
-  { id: 'g3', name: 'Grabación Sesión 03: Redacción e IA', category: 'Grabaciones', type: 'Video', size: '1h 41m', course: 'IA aplicada al trabajo' },
-  // Actividades
-  { id: 'a1', name: 'Actividad 1: Operadores de Búsqueda', category: 'Actividades', type: 'PDF', size: '1.1 MB', course: 'IA aplicada al trabajo' },
-  { id: 'a2', name: 'Actividad 2: Extracción de Metadatos', category: 'Actividades', type: 'PDF', size: '920 KB', course: 'IA aplicada al trabajo' },
-  { id: 'a3', name: 'Actividad 3: Paráfrasis Científica', category: 'Actividades', type: 'PDF', size: '1.4 MB', course: 'IA aplicada al trabajo' },
-  // Recursos
-  { id: 'r1', name: 'ChatGPT - Portal de Inteligencia Artificial', category: 'Recursos', type: 'Web', size: 'Link', course: 'Recursos Externos' },
-  { id: 'r2', name: 'Claude AI - Redacción y Resúmenes', category: 'Recursos', type: 'Web', size: 'Link', course: 'Recursos Externos' },
-  { id: 'r3', name: 'Consensus AI - Buscador Académico de IA', category: 'Recursos', type: 'Web', size: 'Link', course: 'Recursos Externos' },
-  { id: 'r4', name: 'Guía Rápida de Prompts Académicos Avanzados', category: 'Recursos', type: 'PDF', size: '2.1 MB', course: 'IA aplicada al trabajo' }
-];
-
-const StudentLibrary = () => {
+const StudentLibrary = ({ settings: propSettings }) => {
+  const settings = propSettings || getSettings();
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredResources, setFilteredResources] = useState(LIBRARY_RESOURCES);
+  const [filteredResources, setFilteredResources] = useState([]);
 
   const categories = ['Todos', 'Presentaciones', 'Plantillas', 'Grabaciones', 'Actividades', 'Recursos'];
 
+  const getRealResources = () => {
+    if (!settings || !settings.sessions) return [];
+    const list = [];
+    settings.sessions.forEach(session => {
+      // Add presentation if available
+      if (session.presentationUrl && session.presentationUrl !== '#' && session.presentationUrl.trim() !== '') {
+        list.push({
+          id: `pres_${session.id}`,
+          name: `Presentación ${session.name}: ${session.title}`,
+          category: 'Presentaciones',
+          type: 'PDF',
+          size: 'Material Oficial',
+          course: settings.courseName
+        });
+      }
+      // Add youtube recording if available
+      if (session.youtubeUrl && session.youtubeUrl.trim() !== '') {
+        list.push({
+          id: `rec_${session.id}`,
+          name: `Grabación ${session.name}: ${session.title}`,
+          category: 'Grabaciones',
+          type: 'Video',
+          size: 'YouTube',
+          course: settings.courseName
+        });
+      }
+      // Add activities
+      if (session.activities) {
+        session.activities.forEach((act, idx) => {
+          list.push({
+            id: `act_${session.id}_${idx}`,
+            name: `${act.title} (${session.name})`,
+            category: 'Actividades',
+            type: 'PDF',
+            size: act.status || 'Asignada',
+            course: settings.courseName
+          });
+        });
+      }
+      // Add resources
+      if (session.resources) {
+        session.resources.forEach((res, idx) => {
+          list.push({
+            id: `res_${session.id}_${idx}`,
+            name: `${res.name} (${session.name})`,
+            category: res.type === 'DOCX' || res.type === 'XLSX' ? 'Plantillas' : 'Recursos',
+            type: res.type || 'Documento',
+            size: res.type === 'Web' ? 'Link' : 'Descarga',
+            course: settings.courseName
+          });
+        });
+      }
+    });
+    return list;
+  };
+
   useEffect(() => {
-    let result = LIBRARY_RESOURCES;
+    let result = getRealResources();
     
     // Category filter
     if (activeCategory !== 'Todos') {
@@ -56,7 +87,8 @@ const StudentLibrary = () => {
     }
     
     setFilteredResources(result);
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, settings]);
+
 
   const getResourceIcon = (category) => {
     switch (category) {
