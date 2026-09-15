@@ -2,6 +2,7 @@ import React from 'react';
 import GlassCard from '../../components/GlassCard';
 import GlassPill from '../../components/GlassPill';
 import GlassSculpture from '../../components/GlassSculpture';
+import logoImg from '../../assets/logo-nobg.png';
 import { 
   Home, BookOpen, Library, Calendar, Folder, Star, Brain, ArrowRight, LogOut, User 
 } from 'lucide-react';
@@ -48,9 +49,16 @@ const StudentDashboard = ({
       {/* Student Top Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '35px', flexWrap: 'wrap', gap: '15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #31c48d, #3f83f8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen style={{ color: '#fff', width: '18px', height: '18px' }} />
-          </div>
+          <img 
+            src={logoImg} 
+            alt="Student Hub Logo" 
+            style={{ 
+              width: '42px', 
+              height: '42px', 
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 4px 12px rgba(63, 131, 248, 0.3))' 
+            }} 
+          />
           <span style={{ fontFamily: 'Outfit', fontWeight: 800, fontSize: '18px', letterSpacing: '-0.5px' }}>
             Aula<span style={{ color: '#3f83f8' }}>Virtual</span>
           </span>

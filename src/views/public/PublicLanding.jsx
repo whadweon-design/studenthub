@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getSettings } from '../../services/db';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
+import logoImg from '../../assets/logo-nobg.png';
 import { Calendar, Clock, Monitor, BookOpen, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import './PublicLanding.css';
 
@@ -43,10 +44,12 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
 
       {/* Header section */}
       <div className="public-landing-header">
-        <div className="public-landing-logo">
-          <div className="public-landing-logo-icon">
-            <BookOpen style={{ color: '#fff', width: '22px', height: '22px' }} />
-          </div>
+        <div className="public-landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img 
+            src={logoImg} 
+            alt="Student Hub Logo" 
+            style={{ width: '42px', height: '42px', objectFit: 'contain', filter: 'drop-shadow(0 4px 10px rgba(63, 131, 248, 0.3))' }} 
+          />
           <span className="public-landing-logo-text">Convocatoria <span style={{ color: '#3f83f8' }}>Student Hub</span></span>
         </div>
         
@@ -92,18 +95,22 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
           <div className="public-landing-card-circle-wrapper">
             {/* Elegant glass design circle */}
             <div style={{
-              width: '120px',
-              height: '120px',
+              width: '125px',
+              height: '125px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(49, 196, 141, 0.45), rgba(63, 131, 248, 0.45))',
+              background: 'radial-gradient(circle, rgba(49, 196, 141, 0.25), rgba(63, 131, 248, 0.25))',
               border: '1px solid rgba(255, 255, 255, 0.7)',
-              boxShadow: '0 10px 30px rgba(63, 131, 248, 0.15)',
+              boxShadow: '0 10px 30px rgba(63, 131, 248, 0.2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               backdropFilter: 'blur(10px)'
             }}>
-              <BookOpen size={48} style={{ color: '#1e429f' }} />
+              <img 
+                src={logoImg} 
+                alt="Student Hub" 
+                style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 8px 15px rgba(63, 131, 248, 0.3))' }} 
+              />
             </div>
             <div style={{
               position: 'absolute',

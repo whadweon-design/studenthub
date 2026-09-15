@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { loginUser } from '../../services/db';
 import GlassCard from '../../components/GlassCard';
+import logoImg from '../../assets/logo-nobg.png';
 import { BookOpen, Key, Mail, Lock, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
@@ -67,9 +68,17 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
         
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #31c48d, #3f83f8)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(63, 131, 248, 0.2)', marginBottom: '12px' }}>
-            <BookOpen style={{ color: '#fff', width: '24px', height: '24px' }} />
-          </div>
+          <img 
+            src={logoImg} 
+            alt="Student Hub Logo" 
+            style={{ 
+              width: '64px', 
+              height: '64px', 
+              objectFit: 'contain', 
+              marginBottom: '12px',
+              filter: 'drop-shadow(0 6px 16px rgba(63, 131, 248, 0.3))'
+            }} 
+          />
           <h2 style={{ fontSize: '26px', letterSpacing: '-0.5px' }}>Aula Virtual</h2>
           <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
             {view === 'login' ? 'Ingresa tus credenciales para acceder' : 'Recupera tu contraseña de acceso'}
