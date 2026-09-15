@@ -58,9 +58,10 @@ const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
         <span className="glass-pill blue" style={{ marginBottom: '12px', pointerEvents: 'none' }}>Detalle de capacitación</span>
         <h1 style={{ fontSize: '32px', letterSpacing: '-0.8px', marginBottom: '10px' }}>{course.name}</h1>
         <p style={{ color: '#4b5563', fontSize: '15px', lineHeight: 1.6, maxWidth: '700px' }}>
-          {course.id === 'ia-trabajo' ? settings.courseDescription : course.description}
+          {settings.courseDescription || course.description}
         </p>
       </div>
+
 
       {/* Sessions Syllabus List */}
       <div>

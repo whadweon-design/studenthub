@@ -31,14 +31,14 @@ export const clearActiveCheckout = () => {
 // Initial Default Configurations
 const DEFAULT_SETTINGS = {
   courseName: 'LEVEL UP',
-  courseDescription: 'Un curso práctico para estudiantes que quieren descubrir cómo utilizar la Inteligencia Artificial para aprender mejor, desarrollar ideas, crear contenido y prepararse para el mundo profesional.',
+  courseDescription: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.',
   price: 499,
   bankName: 'BBVA (Bancomer)',
   bankBeneficiary: 'Carlos Eduardo Ramirez Salas',
   bankClabe: '012 180 01546317540 4',
   bankAccount: '154 631 7540',
   bankConcept: 'Nombre Completo del Alumno',
-  whatsappNumber: '5641439566', // Real WhatsApp administrativio
+  whatsappNumber: '5641439566', // Real WhatsApp administrativo
   sessions: [
     { id: '1', name: 'Sesión 01', title: 'IA desde Cero: Entiende lo que Hay Detrás', description: 'Qué es la IA, cómo funciona y qué puede hacer realmente.', day: 'Lunes', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 1: Exploración e Introducción', desc: 'Configura tus primeras consultas de Inteligencia Artificial.', file: 'actividad_01.pdf', status: 'No iniciada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
     { id: '2', name: 'Sesión 02', title: 'Habla con la IA: El Poder de los Prompts', description: 'Ingeniería de prompts aplicada al estudio y trabajo.', day: 'Miércoles', date: '', time: '7:00 PM', status: 'Próxima', youtubeUrl: '', meetLink: 'https://meet.google.com/abc-def-ghi', presentationUrl: '#', activities: [{ title: 'Actividad 2: Estructuración de Prompts Avanzados', desc: 'Aplica plantillas de investigación y resumen.', file: 'actividad_02.pdf', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Prompts', type: 'DOCX' }] },
@@ -49,34 +49,14 @@ const DEFAULT_SETTINGS = {
 
 const DEFAULT_COURSES = [
   {
-    id: 'ia-trabajo',
-    name: 'IA aplicada al trabajo',
-    description: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más.',
-    progress: 68,
+    id: 'level-up',
+    name: 'LEVEL UP',
+    description: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.',
+    progress: 0,
     status: 'En progreso',
     color: 'mint',
     icon: 'brain',
-    sessionsCount: 6
-  },
-  {
-    id: 'organizacion-digital',
-    name: 'Organización digital',
-    description: 'Domina metodologías de organización personal y herramientas para estructurar tu conocimiento.',
-    progress: 35,
-    status: 'En progreso',
-    color: 'blue',
-    icon: 'folder',
     sessionsCount: 4
-  },
-  {
-    id: 'aula-virtual-premium',
-    name: 'Aula virtual premium',
-    description: 'Acceso ilimitado a todas nuestras grabaciones históricas, recursos VIP y mentorías mensuales.',
-    progress: 12,
-    status: 'Próximamente',
-    color: 'coral',
-    icon: 'star',
-    sessionsCount: 12
   }
 ];
 
@@ -88,9 +68,10 @@ export const initDB = () => {
   } else {
     try {
       const parsed = JSON.parse(existingSettings);
-      // Always ensure sessions have the latest official syllabus titles
       const updated = {
         ...parsed,
+        courseName: DEFAULT_SETTINGS.courseName,
+        courseDescription: DEFAULT_SETTINGS.courseDescription,
         sessions: DEFAULT_SETTINGS.sessions,
         bankName: DEFAULT_SETTINGS.bankName,
         bankBeneficiary: DEFAULT_SETTINGS.bankBeneficiary,
@@ -105,9 +86,10 @@ export const initDB = () => {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEFAULT_SETTINGS));
     }
   }
-  if (!localStorage.getItem(STORAGE_KEYS.COURSES)) {
-    localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(DEFAULT_COURSES));
-  }
+
+  // Always reset courses to strictly contain ONLY the single real course: LEVEL UP
+  localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(DEFAULT_COURSES));
+
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     // Admin user default (CEO)
     const defaultUsers = [
@@ -127,13 +109,9 @@ export const initDB = () => {
         isAdmin: false,
         status: 'Inscripción activa',
         progress: {
-          'ia-trabajo': 68,
-          'organizacion-digital': 35,
-          'aula-virtual-premium': 12
+          'level-up': 0
         },
-        completedSessions: {
-          'ia-trabajo': ['1', '2']
-        }
+        completedSessions: {}
       }
     ];
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(defaultUsers));
@@ -157,6 +135,7 @@ export const initDB = () => {
     }
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }
+
   // Initialize or clean up enrollments in localStorage (Ensure NO mock data, seed real registrations)
   const existingEnrollmentsRaw = localStorage.getItem(STORAGE_KEYS.ENROLLMENTS);
   let currentEnrollments = [];

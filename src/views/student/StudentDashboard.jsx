@@ -25,7 +25,8 @@ const StudentDashboard = ({
   const grabacionesCount = settings.sessions.filter(s => s.youtubeUrl && s.youtubeUrl.trim() !== '').length;
 
   const getCourseProgress = (courseId) => {
-    return user.progress?.[courseId] !== undefined ? user.progress[courseId] : 50;
+    const id = courseId || 'level-up';
+    return user.progress?.[id] !== undefined ? user.progress[id] : (user.progress?.['ia-trabajo'] || 0);
   };
 
   const getIconComponent = (iconName) => {
@@ -115,27 +116,27 @@ const StudentDashboard = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', alignItems: 'center' }}>
               <div>
                 <h2 style={{ fontSize: '28px', lineHeight: 1.2, marginBottom: '10px', letterSpacing: '-0.5px' }}>
-                  {settings.courseName.split(':')[0]}
+                  {settings.courseName}
                 </h2>
                 <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.5, marginBottom: '28px' }}>
-                  Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.
+                  {settings.courseDescription}
                 </p>
 
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
                     <span>Progreso del curso</span>
-                    <span>{getCourseProgress('ia-trabajo')}% completado</span>
+                    <span>{getCourseProgress(courses[0]?.id || 'level-up')}% completado</span>
                   </div>
                   <div className="progress-bar-container">
                     <div 
                       className="progress-bar-fill mint" 
-                      style={{ width: `${getCourseProgress('ia-trabajo')}%` }}
+                      style={{ width: `${getCourseProgress(courses[0]?.id || 'level-up')}%` }}
                     />
                   </div>
                 </div>
 
                 <button 
-                  onClick={() => onSelectCourse(courses[0] || { id: 'ia-trabajo', name: settings.courseName })} 
+                  onClick={() => onSelectCourse(courses[0] || { id: 'level-up', name: settings.courseName })} 
                   className="glass-pill mint" 
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
@@ -150,6 +151,7 @@ const StudentDashboard = ({
               </div>
             </div>
           </GlassCard>
+
 
           {/* Sesiones del curso Section - Acceso Directo a las 4 Sesiones */}
           <div>
