@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../../components/GlassCard';
+import JitsiMeeting from '../../components/JitsiMeeting';
 import { 
   ArrowLeft, FileText, Download, Link as LinkIcon, Calendar, Video, Clock, CheckCircle, Circle, Play, MessageSquare, Send, Radio, Info 
 } from 'lucide-react';
@@ -10,12 +11,19 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
   const [showVideo, setShowVideo] = useState(false);
   const [activeSection, setActiveSection] = useState('all'); // 'all' | 'live' | 'chat' | 'resources' | 'recording'
 
+  // Live Jitsi state per session
+  const [isLiveClassActive, setIsLiveClassActive] = useState(false);
+
   // Independent Chat state per session ID
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [liveNotice, setLiveNotice] = useState(false);
 
   const storageChatKey = `aula_chat_session_${session?.id || '1'}`;
+
+  // Reset live class active state when session changes
+  useEffect(() => {
+    setIsLiveClassActive(false);
+  }, [session.id]);
 
   // Load completed state and session-specific chat messages
   useEffect(() => {
@@ -209,60 +217,62 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
       </div>
 
       {/* Main Grid Content */}
-      <div style={{ display: 'grid', gridTemplateColumns: activeSection === 'chat' || activeSection === 'live' ? '1fr' : '1.2fr 0.8fr', gap: '28px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: activeSection === 'chat' || activeSection === 'live' || isLiveClassActive ? '1fr' : '1.2fr 0.8fr', gap: '28px', alignItems: 'start' }}>
         
         {/* Left Column: Live Class, Recording & Chat */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           
-          {/* SECTION 1: 🔴 Entrar a clase */}
-          {(activeSection === 'all' || activeSection === 'live') && (
-            <GlassCard tint="blue" style={{ padding: '28px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(225, 239, 254, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3f83f8' }}>
-                    <Video size={24} />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800 }}>🔴 Entrar a clase en vivo</h3>
-                    <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '2px' }}>
-                      {session.name} · {session.day} {session.time ? `a las ${session.time}` : ''}
+          {/* SECTION 1: 🔴 Entrar a clase (Embedded Jitsi Videocall inside Student Hub) */}
+          {isLiveClassActive ? (
+            <JitsiMeeting 
+              session={session}
+              user={user}
+              onClose={() => setIsLiveClassActive(false)}
+            />
+          ) : (
+            (activeSection === 'all' || activeSection === 'live') && (
+              <GlassCard tint="blue" style={{ padding: '28px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(225, 239, 254, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3f83f8' }}>
+                      <Video size={24} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '20px', fontWeight: 800 }}>🔴 Entrar a clase en vivo</h3>
+                      <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '2px' }}>
+                        {session.name} · {session.day} {session.time ? `a las ${session.time}` : ''}
+                      </div>
                     </div>
                   </div>
+
+                  <span className={`glass-pill ${session.status === 'En vivo' ? 'blue' : 'neutral'}`} style={{ pointerEvents: 'none', fontSize: '12px' }}>
+                    {session.status === 'En vivo' ? 'En Vivo Ahora' : session.status === 'Finalizada' ? 'Finalizada' : 'Programada'}
+                  </span>
                 </div>
 
-                <span className={`glass-pill ${session.status === 'En vivo' ? 'blue' : 'neutral'}`} style={{ pointerEvents: 'none', fontSize: '12px' }}>
-                  {session.status === 'En vivo' ? 'En Vivo Ahora' : session.status === 'Finalizada' ? 'Finalizada' : 'Programada'}
-                </span>
-              </div>
+                <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
+                  Accede a la sala interactiva en vivo para interactuar con el profesor y resolver dudas de la <strong>{session.name}</strong>.
+                </p>
 
-              <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
-                Accede a la sala interactiva en vivo para interactuar con el profesor y resolver dudas de la <strong>{session.name}</strong>.
-              </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={() => setIsLiveClassActive(true)} 
+                    className="glass-pill blue"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 700 }}
+                  >
+                    <Video size={18} />
+                    <span>🔴 Entrar a clase ({session.name})</span>
+                  </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => setLiveNotice(true)} 
-                  className="glass-pill blue"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '14px', fontWeight: 700 }}
-                >
-                  <Video size={18} />
-                  <span>🔴 Entrar a clase ({session.name})</span>
-                </button>
-
-                <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Info size={14} />
-                  <span>Integración Jitsi (Etapa 2)</span>
+                  <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Info size={14} />
+                    <span>Transmisión Jitsi integrada dentro de Student Hub</span>
+                  </div>
                 </div>
-              </div>
-
-              {liveNotice && (
-                <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(225, 239, 254, 0.7)', borderRadius: '12px', border: '1px solid rgba(63, 131, 248, 0.3)', color: '#1e429f', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>ℹ️ Estructura de la sesión lista. La videollamada interactiva en vivo (Jitsi) se integrará aquí en la <strong>Etapa 2</strong>.</span>
-                  <button onClick={() => setLiveNotice(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, color: '#1e429f', marginLeft: '10px' }}>✕</button>
-                </div>
-              )}
-            </GlassCard>
+              </GlassCard>
+            )
           )}
+
 
           {/* SECTION 2: 💬 Chat independiente por sesión */}
           {(activeSection === 'all' || activeSection === 'chat') && (
