@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GlassCard from '../../components/GlassCard';
-import JitsiMeeting from '../../components/JitsiMeeting';
+import YouTubeLivePlayer from '../../components/YouTubeLivePlayer';
 import { 
   ArrowLeft, FileText, Download, Link as LinkIcon, Calendar, Video, Clock, CheckCircle, Circle, Play, MessageSquare, Send, Radio, Info 
 } from 'lucide-react';
@@ -222,9 +222,9 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
         {/* Left Column: Live Class, Recording & Chat */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
           
-          {/* SECTION 1: 🔴 Entrar a clase (Embedded Jitsi Videocall inside Student Hub) */}
+          {/* SECTION 1: 🔴 Entrar a clase (Embedded YouTube Live inside Student Hub) */}
           {isLiveClassActive ? (
-            <JitsiMeeting 
+            <YouTubeLivePlayer 
               session={session}
               user={user}
               onClose={() => setIsLiveClassActive(false)}
@@ -251,7 +251,7 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
                 </div>
 
                 <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
-                  Accede a la sala interactiva en vivo para interactuar con el profesor y resolver dudas de la <strong>{session.name}</strong>.
+                  Accede a la transmisión oficial en vivo para seguir la clase con el profesor y resolver dudas de la <strong>{session.name}</strong>.
                 </p>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -266,7 +266,7 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
 
                   <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Info size={14} />
-                    <span>Transmisión Jitsi integrada dentro de Student Hub</span>
+                    <span>Transmisión YouTube Live integrada dentro de Student Hub</span>
                   </div>
                 </div>
               </GlassCard>

@@ -392,12 +392,12 @@ const AdminPortal = ({ onBack }) => {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Enlace del directo (Zoom / Meet)</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Transmisión de YouTube Live (URL)</label>
                     <input 
                       type="text" 
-                      value={session.meetLink}
-                      onChange={(e) => handleSessionChange(index, 'meetLink', e.target.value)}
-                      placeholder="https://meet.google.com/abc-def-ghi" 
+                      value={session.liveUrl !== undefined ? session.liveUrl : (session.meetLink || '')}
+                      onChange={(e) => handleSessionChange(index, 'liveUrl', e.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..." 
                       className="glass-input" 
                     />
                   </div>
