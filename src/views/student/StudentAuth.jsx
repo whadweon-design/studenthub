@@ -97,40 +97,9 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
         throw new Error(authError.message || 'Error al iniciar sesión en Supabase.');
       }
 
-      const sbUser = data.user;
-      if (!sbUser) {
-        throw new Error('No se pudo obtener la información de la cuenta autenticada.');
-      }
-
-      // 2. Consulta de la fila correspondiente en public.profiles para obtener el rol
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, phone, role')
-        .eq('id', sbUser.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.warn('No se pudo consultar el perfil del usuario:', profileError.message);
-      }
-
-      // 3. Extracción del rol exclusivamente desde public.profiles
-      const userRole = profile?.role || 'student';
-      const isAdmin = userRole === 'admin';
-
-      const authenticatedUser = {
-        id: sbUser.id,
-        email: sbUser.email,
-        name: profile?.full_name || sbUser.user_metadata?.full_name || sbUser.email,
-        phone: profile?.phone || '',
-        role: userRole,
-        isAdmin: isAdmin,
-        status: 'Inscripción activa'
-      };
-
-      // 4. Mantener la sesión activa en el cliente
-      localStorage.setItem('aula_current_user', JSON.stringify(authenticatedUser));
-
-      onLoginSuccess(authenticatedUser);
+      // Autenticación en Supabase Auth completada exitosamente.
+      // El evento SIGNED_IN de supabase.auth.onAuthStateChange en App.jsx asumirá el control
+      // de la restauración de sesión, la verificación de enrollments y la navegación estricta.
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {

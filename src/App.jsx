@@ -199,7 +199,11 @@ function App() {
             }
             enrollment = existingAfterConflict;
           } else {
-            console.error('Fail closed: Error al crear la inscripción en public.enrollments:', insertError);
+            console.error('Fail closed: Error al crear la inscripción en public.enrollments:', {
+              code: insertError?.code,
+              message: insertError?.message,
+              details: insertError?.details
+            });
             setCurrentUser(null);
             localStorage.removeItem('aula_current_user');
             setCurrentPage('landing');
