@@ -33,35 +33,58 @@ function App() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
 
-  // Escuchar eventos de autenticación de Supabase (recuperación de contraseña, cierre de sesión y confirmación de correo)
+  // Escuchar eventos de autenticación de Supabase (recuperación de contraseña, cierre de sesión, restauración de sesión y confirmación de correo)
   useEffect(() => {
+    initDB();
+    const activeSettings = getSettings();
+    setSettings(activeSettings);
+    setCourses(getCourses());
+
+    setAuthLoading(true);
+
+    let isMounted = true;
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
       if (event === 'PASSWORD_RECOVERY') {
         setCurrentPage('reset-password');
-      } else if (event === 'SIGNED_OUT') {
+        setAuthLoading(false);
+      } else if (event === 'SIGNED_OUT' || !session?.user) {
         setCurrentUser(null);
         localStorage.removeItem('aula_current_user');
         setSelectedCourse(null);
         setSelectedSession(null);
-        setCurrentPage('landing');
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        const activeUser = await restoreUserSession(session.user);
-        if (activeUser) {
-          if (activeUser.isAdmin) {
-            setCurrentPage('admin');
-          } else {
-            setCurrentPage('classroom');
-          }
+
+        // Restaurar borrador de pago si estaba en proceso activo
+        const pendingCheckout = getActiveCheckout();
+        if (pendingCheckout && pendingCheckout.studentData && pendingCheckout.step === 'payment') {
+          setStudentRegisterData(pendingCheckout.studentData);
+          setCurrentEnrollmentId(pendingCheckout.enrollmentId);
+          setCurrentPage('payment');
+        } else {
+          setCurrentPage('landing');
+        }
+        setAuthLoading(false);
+      } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+        await restoreUserSession(session.user);
+        if (isMounted) {
+          setAuthLoading(false);
+        }
+      } else {
+        if (isMounted) {
+          setAuthLoading(false);
         }
       }
     });
 
     return () => {
+      isMounted = false;
       authListener?.subscription?.unsubscribe();
     };
   }, []);
 
-  // Función helper para consultar public.profiles y verificar rol de forma segura
+  // Función helper para consultar public.profiles, public.courses y public.enrollments para verificar rol e inscripción de forma segura (Fail Closed)
   const restoreUserSession = async (sbUser) => {
     if (!sbUser) {
       setCurrentUser(null);
@@ -69,95 +92,171 @@ function App() {
       return null;
     }
 
-    // Consulta de la fila correspondiente en public.profiles
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('full_name, phone, role')
-      .eq('id', sbUser.id)
-      .maybeSingle();
+    try {
+      // 1. Consulta de la fila correspondiente en public.profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, phone, role')
+        .eq('id', sbUser.id)
+        .maybeSingle();
 
-    // Regla de Seguridad: Si la consulta de perfiles falla o no existe el perfil, NO se asume 'student' ni se concede acceso
-    if (profileError || !profile) {
-      console.error('Error de autenticación/restauración: Perfil no encontrado o inaccesible en public.profiles', profileError);
-      try {
-        await supabase.auth.signOut();
-      } catch (e) {
-        // Ignorar error al desloguear usuario sin perfil
-      }
-      setCurrentUser(null);
-      localStorage.removeItem('aula_current_user');
-      return null;
-    }
-
-    // isAdmin se deriva EXCLUSIVAMENTE de profile.role === 'admin'
-    const userRole = profile.role;
-    const isAdmin = userRole === 'admin';
-
-    const activeUser = {
-      id: sbUser.id,
-      email: sbUser.email,
-      name: profile.full_name || sbUser.user_metadata?.full_name || sbUser.email,
-      phone: profile.phone || '',
-      role: userRole,
-      isAdmin: isAdmin,
-      status: 'Inscripción activa'
-    };
-
-    // Espejo transitorio de compatibilidad en localStorage
-    localStorage.setItem('aula_current_user', JSON.stringify(activeUser));
-    setCurrentUser(activeUser);
-    return activeUser;
-  };
-
-  // Restauración de sesión mediante Supabase Auth como fuente de autoridad al iniciar
-  useEffect(() => {
-    initDB();
-    const activeSettings = getSettings();
-    setSettings(activeSettings);
-    setCourses(getCourses());
-    
-    const initializeAuthSession = async () => {
-      setAuthLoading(true);
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-
-        if (session?.user) {
-          const activeUser = await restoreUserSession(session.user);
-          if (activeUser) {
-            if (activeUser.isAdmin) {
-              setCurrentPage('admin');
-            } else {
-              setCurrentPage('classroom');
-            }
-          } else {
-            setCurrentPage('landing');
-          }
-        } else {
-          setCurrentUser(null);
-          localStorage.removeItem('aula_current_user');
-
-          // Restaurar borrador de pago si estaba en proceso activo
-          const pendingCheckout = getActiveCheckout();
-          if (pendingCheckout && pendingCheckout.studentData && pendingCheckout.step === 'payment') {
-            setStudentRegisterData(pendingCheckout.studentData);
-            setCurrentEnrollmentId(pendingCheckout.enrollmentId);
-            setCurrentPage('payment');
-          } else {
-            setCurrentPage('landing');
-          }
+      // Regla de Seguridad / Fail Closed: Si la consulta de perfiles falla o no existe el perfil, NO se asume 'student' ni se concede acceso
+      if (profileError || !profile) {
+        console.error('Error de autenticación/restauración: Perfil no encontrado o inaccesible en public.profiles', profileError);
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          // Ignorar error al desloguear usuario sin perfil
         }
-      } catch (err) {
-        console.error('Error al inicializar sesión en Supabase:', err);
         setCurrentUser(null);
         localStorage.removeItem('aula_current_user');
         setCurrentPage('landing');
-      } finally {
-        setAuthLoading(false);
+        return null;
       }
-    };
 
-    initializeAuthSession();
-  }, []);
+      // isAdmin se deriva EXCLUSIVAMENTE de profile.role === 'admin'
+      const userRole = profile.role;
+      const isAdmin = userRole === 'admin';
+
+      if (isAdmin) {
+        const activeAdminUser = {
+          id: sbUser.id,
+          email: sbUser.email,
+          name: profile.full_name || sbUser.user_metadata?.full_name || sbUser.email,
+          phone: profile.phone || '',
+          role: userRole,
+          isAdmin: true,
+          status: 'Inscripción activa'
+        };
+        localStorage.setItem('aula_current_user', JSON.stringify(activeAdminUser));
+        setCurrentUser(activeAdminUser);
+        setCurrentPage('admin');
+        return activeAdminUser;
+      }
+
+      // 2. Para usuario estudiante: consultar el UUID real del curso LEVEL UP en public.courses mediante slug = 'level-up'
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('id, title, price_mxn')
+        .eq('slug', 'level-up')
+        .maybeSingle();
+
+      if (courseError || !courseData) {
+        console.error('Fail closed: No se pudo obtener el curso LEVEL UP de public.courses', courseError);
+        setCurrentUser(null);
+        localStorage.removeItem('aula_current_user');
+        setCurrentPage('landing');
+        return null;
+      }
+
+      const realCourseId = courseData.id;
+
+      // 3. Consultar la inscripción en public.enrollments usando user_id = sbUser.id y course_id = realCourseId
+      let { data: enrollment, error: enrollmentError } = await supabase
+        .from('enrollments')
+        .select('id, status, user_id, course_id')
+        .eq('user_id', sbUser.id)
+        .eq('course_id', realCourseId)
+        .maybeSingle();
+
+      if (enrollmentError) {
+        console.error('Error al consultar inscripciones en public.enrollments:', enrollmentError);
+        setCurrentUser(null);
+        localStorage.removeItem('aula_current_user');
+        setCurrentPage('landing');
+        return null;
+      }
+
+      // 4. Si NO existe inscripción, intentar crearla con status = 'REGISTRO_INICIADO'
+      if (!enrollment) {
+        const { data: newEnrollment, error: insertError } = await supabase
+          .from('enrollments')
+          .insert({
+            user_id: sbUser.id,
+            course_id: realCourseId,
+            status: 'REGISTRO_INICIADO'
+          })
+          .select('id, status, user_id, course_id')
+          .single();
+
+        if (insertError) {
+          // Manejo del error PostgreSQL 23505 (violación de restricción UNIQUE por ejecución concurrente)
+          if (insertError.code === '23505' || insertError.message?.includes('unique_user_course') || insertError.message?.includes('duplicate key')) {
+            console.warn('Inserción concurrente detectada (PostgreSQL 23505). Recuperando inscripción existente...');
+            const { data: existingAfterConflict, error: retryError } = await supabase
+              .from('enrollments')
+              .select('id, status, user_id, course_id')
+              .eq('user_id', sbUser.id)
+              .eq('course_id', realCourseId)
+              .maybeSingle();
+
+            if (retryError || !existingAfterConflict) {
+              console.error('Fail closed: No se pudo recuperar la inscripción tras conflicto de concurrencia:', retryError);
+              setCurrentUser(null);
+              localStorage.removeItem('aula_current_user');
+              setCurrentPage('landing');
+              return null;
+            }
+            enrollment = existingAfterConflict;
+          } else {
+            console.error('Fail closed: Error al crear la inscripción en public.enrollments:', insertError);
+            setCurrentUser(null);
+            localStorage.removeItem('aula_current_user');
+            setCurrentPage('landing');
+            return null;
+          }
+        } else {
+          enrollment = newEnrollment;
+        }
+      }
+
+      const enrollmentStatus = enrollment?.status || 'REGISTRO_INICIADO';
+
+      const activeStudentUser = {
+        id: sbUser.id,
+        email: sbUser.email,
+        name: profile.full_name || sbUser.user_metadata?.full_name || sbUser.email,
+        phone: profile.phone || '',
+        role: 'student',
+        isAdmin: false,
+        status: enrollmentStatus,
+        enrollmentId: enrollment?.id
+      };
+
+      // Espejo transitorio de compatibilidad visual en localStorage
+      localStorage.setItem('aula_current_user', JSON.stringify(activeStudentUser));
+      setCurrentUser(activeStudentUser);
+      setCurrentEnrollmentId(enrollment?.id || null);
+
+      // 5. Mapeo de Navegación Estricto / Fail Closed (Acceso al Aula ÚNICAMENTE si status === 'APROBADA')
+      switch (enrollmentStatus) {
+        case 'APROBADA':
+          setCurrentPage('classroom');
+          break;
+        case 'REGISTRO_INICIADO':
+          setCurrentPage('payment');
+          break;
+        case 'PENDIENTE_VALIDACION':
+          setCurrentPage('status');
+          break;
+        case 'RECHAZADA':
+          setCurrentPage('status');
+          break;
+        default:
+          console.warn('Fail closed: Estado de inscripción no reconocido o no aprobado:', enrollmentStatus);
+          setCurrentPage('status');
+          break;
+      }
+
+      return activeStudentUser;
+    } catch (err) {
+      console.error('Fail closed: Excepción inesperada durante restoreUserSession:', err);
+      setCurrentUser(null);
+      localStorage.removeItem('aula_current_user');
+      setCurrentPage('landing');
+      return null;
+    }
+  };
 
   // Update layout when database states change
   const refreshAppState = () => {
@@ -233,8 +332,12 @@ function App() {
     setCurrentUser(user);
     if (user.isAdmin) {
       setCurrentPage('admin');
-    } else {
+    } else if (user.status === 'APROBADA') {
       setCurrentPage('classroom');
+    } else if (user.status === 'REGISTRO_INICIADO') {
+      setCurrentPage('payment');
+    } else {
+      setCurrentPage('status');
     }
   };
 
