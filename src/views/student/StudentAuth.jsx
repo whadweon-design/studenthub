@@ -1,48 +1,206 @@
-import React, { useState } from 'react';
-import { loginUser } from '../../services/db';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 import GlassCard from '../../components/GlassCard';
 import logoImg from '../../assets/logo-nobg.png';
-import { BookOpen, Key, Mail, Lock, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Key, Mail, Lock, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 
-const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
+const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [view, setView] = useState('login'); // login | recovery
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState(initialView); // login | recovery | reset-password
   const [recoverySent, setRecoverySent] = useState(false);
+  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [isUnconfirmedUser, setIsUnconfirmedUser] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState(null);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    setView(initialView);
+    setError('');
+    setIsUnconfirmedUser(false);
+    setResendFeedback(null);
+  }, [initialView]);
+
+  const handleResendEmail = async () => {
+    if (resendLoading) return;
+    const emailToResend = email.trim();
+    if (!emailToResend) {
+      setResendFeedback({
+        type: 'error',
+        message: 'Por favor introduce un correo electrónico en el formulario para reenviar la confirmación.'
+      });
+      return;
+    }
+
+    setResendLoading(true);
+    setResendFeedback(null);
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: emailToResend,
+        options: {
+          emailRedirectTo: `${window.location.origin}`
+        }
+      });
+
+      if (resendError) {
+        throw new Error(resendError.message || 'No se pudo reenviar el correo de confirmación.');
+      }
+
+      setResendFeedback({
+        type: 'success',
+        message: 'Correo de confirmación reenviado exitosamente. Revisa tu bandeja de entrada o carpeta de spam.'
+      });
+    } catch (err) {
+      setResendFeedback({
+        type: 'error',
+        message: err.message || 'Error al solicitar el reenvío del correo.'
+      });
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsUnconfirmedUser(false);
+    setResendFeedback(null);
 
     if (!email.trim() || !password.trim()) {
       setError('Por favor completa todos los campos.');
       return;
     }
 
+    setLoading(true);
+
     try {
-      const user = loginUser(email, password);
-      
-      // Safety Check: Users must have approved enrollments unless they are admin
-      if (user.status !== 'Inscripción activa' && !user.isAdmin) {
-        setError('Tu inscripción se encuentra pendiente de validación. Debes completar el proceso de pago.');
-        return;
+      // 1. Autenticación con Supabase Auth
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      });
+
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('Correo o contraseña incorrectos. Verifica tus credenciales.');
+        }
+        if (authError.message.includes('Email not confirmed') || authError.message.toLowerCase().includes('not confirmed')) {
+          setIsUnconfirmedUser(true);
+          throw new Error('Tu cuenta está registrada pero tu correo electrónico aún no ha sido confirmado.');
+        }
+        throw new Error(authError.message || 'Error al iniciar sesión en Supabase.');
       }
 
-      onLoginSuccess(user);
+      const sbUser = data.user;
+      if (!sbUser) {
+        throw new Error('No se pudo obtener la información de la cuenta autenticada.');
+      }
+
+      // 2. Consulta de la fila correspondiente en public.profiles para obtener el rol
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('full_name, phone, role')
+        .eq('id', sbUser.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.warn('No se pudo consultar el perfil del usuario:', profileError.message);
+      }
+
+      // 3. Extracción del rol exclusivamente desde public.profiles
+      const userRole = profile?.role || 'student';
+      const isAdmin = userRole === 'admin';
+
+      const authenticatedUser = {
+        id: sbUser.id,
+        email: sbUser.email,
+        name: profile?.full_name || sbUser.user_metadata?.full_name || sbUser.email,
+        phone: profile?.phone || '',
+        role: userRole,
+        isAdmin: isAdmin,
+        status: 'Inscripción activa'
+      };
+
+      // 4. Mantener la sesión activa en el cliente
+      localStorage.setItem('aula_current_user', JSON.stringify(authenticatedUser));
+
+      onLoginSuccess(authenticatedUser);
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRecoverySubmit = (e) => {
+  const handleRecoverySubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Por favor introduce tu correo electrónico.');
       return;
     }
-    setRecoverySent(true);
+
+    setLoading(true);
     setError('');
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}`
+      });
+
+      if (resetError) {
+        throw new Error(resetError.message || 'No se pudo enviar el correo de recuperación.');
+      }
+
+      setRecoverySent(true);
+    } catch (err) {
+      setError(err.message || 'Error al solicitar la recuperación de contraseña.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!newPassword.trim() || !confirmPassword.trim()) {
+      setError('Por favor completa todos los campos.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Las contraseñas no coinciden. Verifícalas e inténtalo de nuevo.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword.trim()
+      });
+
+      if (updateError) {
+        throw new Error(updateError.message || 'No se pudo actualizar la contraseña en Supabase.');
+      }
+
+      setPasswordUpdated(true);
+    } catch (err) {
+      setError(err.message || 'Error al actualizar la contraseña.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,7 +239,9 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
           />
           <h2 style={{ fontSize: '26px', letterSpacing: '-0.5px' }}>Aula Virtual</h2>
           <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
-            {view === 'login' ? 'Ingresa tus credenciales para acceder' : 'Recupera tu contraseña de acceso'}
+            {view === 'login' && 'Ingresa tus credenciales para acceder'}
+            {view === 'recovery' && 'Recupera tu contraseña de acceso'}
+            {view === 'reset-password' && 'Establece tu nueva contraseña de acceso'}
           </p>
         </div>
 
@@ -92,7 +252,44 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
           </div>
         )}
 
-        {view === 'login' ? (
+        {isUnconfirmedUser && (
+          <div style={{ background: 'rgba(239, 246, 255, 0.7)', border: '1px solid rgba(191, 219, 254, 0.8)', borderRadius: '12px', padding: '16px', marginBottom: '20px', textAlign: 'left' }}>
+            <p style={{ color: '#1e40af', fontSize: '13px', lineHeight: 1.4, margin: '0 0 12px 0' }}>
+              ¿No recibiste el correo de confirmación enviado a <strong style={{ wordBreak: 'break-all' }}>{email}</strong>?
+            </p>
+            <button
+              type="button"
+              onClick={handleResendEmail}
+              disabled={resendLoading}
+              className="glass-btn secondary"
+              style={{ width: '100%', padding: '10px', fontSize: '13px', justifyContent: 'center', opacity: resendLoading ? 0.7 : 1 }}
+            >
+              <span>{resendLoading ? 'Reenviando...' : 'Reenviar correo de confirmación'}</span>
+            </button>
+          </div>
+        )}
+
+        {resendFeedback && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: resendFeedback.type === 'success' ? 'rgba(222, 247, 236, 0.7)' : 'rgba(253, 232, 232, 0.7)',
+            border: `1px solid ${resendFeedback.type === 'success' ? 'rgba(49, 196, 141, 0.4)' : 'rgba(249, 128, 128, 0.4)'}`,
+            borderRadius: '12px',
+            padding: '12px 16px',
+            color: resendFeedback.type === 'success' ? '#0e9f6e' : '#9b1c1c',
+            fontSize: '13px',
+            marginBottom: '20px',
+            textAlign: 'left',
+            lineHeight: 1.4
+          }}>
+            {resendFeedback.type === 'success' ? <ShieldCheck size={18} style={{ flexShrink: 0 }} /> : <ShieldAlert size={18} style={{ flexShrink: 0 }} />}
+            <span>{resendFeedback.message}</span>
+          </div>
+        )}
+
+        {view === 'login' && (
           /* Login Form */
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
@@ -143,10 +340,11 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
 
             <button 
               type="submit" 
+              disabled={loading}
               className="glass-btn primary"
-              style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px' }}
+              style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
             >
-              <span>Entrar al Aula</span>
+              <span>{loading ? 'Verificando...' : 'Entrar al Aula'}</span>
               <ArrowRight size={16} />
             </button>
 
@@ -162,7 +360,9 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
             </div>
 
           </form>
-        ) : (
+        )}
+
+        {view === 'recovery' && (
           /* Password Recovery View */
           <form onSubmit={handleRecoverySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
@@ -174,7 +374,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
                 <div>
                   <h3 style={{ fontSize: '18px', color: '#03543f', marginBottom: '6px' }}>Enlace enviado</h3>
                   <p style={{ fontSize: '13px', color: '#046c4e', lineHeight: 1.4 }}>
-                    Hemos enviado un enlace de recuperación simulado a tu correo: <strong>{email}</strong>. Revisa tu bandeja de entrada.
+                    Hemos enviado un enlace oficial de recuperación a tu correo: <strong>{email}</strong>. Revisa tu bandeja de entrada o spam.
                   </p>
                 </div>
                 <button 
@@ -207,16 +407,103 @@ const StudentAuth = ({ onNavigate, onLoginSuccess }) => {
 
                 <button 
                   type="submit" 
+                  disabled={loading}
                   className="glass-btn primary"
-                  style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
                 >
-                  <span>Enviar instrucciones</span>
+                  <span>{loading ? 'Enviando...' : 'Enviar instrucciones'}</span>
                   <Key size={16} />
                 </button>
 
                 <button 
                   type="button" 
-                  onClick={() => setView('login')}
+                  onClick={() => { setView('login'); setError(''); }}
+                  className="glass-btn secondary"
+                  style={{ padding: '10px', width: '100%' }}
+                >
+                  Cancelar
+                </button>
+              </>
+            )}
+
+          </form>
+        )}
+
+        {view === 'reset-password' && (
+          /* New Password Input View (from Supabase Auth recovery link) */
+          <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {passwordUpdated ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', background: 'rgba(222, 247, 236, 0.6)', border: '1px solid rgba(49, 196, 141, 0.4)', borderRadius: '16px', padding: '24px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#def7ec', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0e9f6e' }}>
+                  <ShieldCheck size={28} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '18px', color: '#03543f', marginBottom: '6px' }}>¡Contraseña actualizada!</h3>
+                  <p style={{ fontSize: '13px', color: '#046c4e', lineHeight: 1.4 }}>
+                    Tu contraseña ha sido modificada con éxito en Supabase Auth. Ya puedes iniciar sesión con tu nueva clave.
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => { setView('login'); setPasswordUpdated(false); setError(''); onNavigate('login'); }}
+                  className="glass-btn primary"
+                  style={{ width: '100%', padding: '12px' }}
+                >
+                  Iniciar sesión ahora
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Nueva Contraseña */}
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
+                    Nueva contraseña
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
+                    <input 
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••" 
+                      className="glass-input"
+                      style={{ paddingLeft: '44px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Confirmar Contraseña */}
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
+                    Confirmar nueva contraseña
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
+                    <input 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••" 
+                      className="glass-input"
+                      style={{ paddingLeft: '44px' }}
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="glass-btn primary"
+                  style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                >
+                  <span>{loading ? 'Actualizando...' : 'Guardar nueva contraseña'}</span>
+                  <Key size={16} />
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={() => { setView('login'); setError(''); onNavigate('login'); }}
                   className="glass-btn secondary"
                   style={{ padding: '10px', width: '100%' }}
                 >

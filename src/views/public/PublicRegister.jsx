@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
-import { ArrowLeft, ArrowRight, Shield, User, Mail, Phone, Lock, Eye, EyeOff, Key, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Shield, User, Mail, Phone, Lock, Eye, EyeOff, Key, CheckSquare, Square, ShieldCheck, ShieldAlert } from 'lucide-react';
 import './PublicRegister.css';
 
 const COUNTRY_CODES = [
@@ -17,7 +18,7 @@ const COUNTRY_CODES = [
   { code: '+593', name: 'Ecuador', flag: '🇪🇨' }
 ];
 
-const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
+const PublicRegister = ({ onNavigate, initialData = {} }) => {
   const [settings, setSettings] = useState(null);
   const [formData, setFormData] = useState({
     name: initialData.name || '',
@@ -31,6 +32,11 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendFeedback, setResendFeedback] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
 
   useEffect(() => {
@@ -85,23 +91,170 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      const fullPhone = `${formData.phoneCode} ${formData.phoneNumber}`;
-      onRegisterSubmit({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-        phone: fullPhone,
-        rawPhone: formData.phoneNumber,
-        phoneCode: formData.phoneCode
+    setSubmitError('');
+
+    if (!validate()) return;
+
+    setLoading(true);
+
+    try {
+      const fullPhone = `${formData.phoneCode} ${formData.phoneNumber}`.trim();
+
+      // Registro real con Supabase Auth (desencadena trigger handle_new_user -> public.profiles)
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}`,
+          data: {
+            full_name: formData.name.trim(),
+            phone: fullPhone
+          }
+        }
       });
+
+      if (signUpError) {
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('User already exists')) {
+          throw new Error('Este correo electrónico ya está registrado. Intenta iniciar sesión con tu contraseña.');
+        }
+        throw new Error(signUpError.message || 'No se pudo registrar la cuenta en Supabase Auth.');
+      }
+
+      // Registro aceptado por Supabase. Mostramos tarjeta "Confirma tu correo"
+      setEmailSent(true);
+    } catch (err) {
+      setSubmitError(err.message || 'Error al procesar el registro.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (resendLoading) return;
+    setResendLoading(true);
+    setResendFeedback(null);
+
+    try {
+      const emailToResend = formData.email.trim();
+      if (!emailToResend) {
+        throw new Error('No se encontró la dirección de correo para reenviar.');
+      }
+
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: emailToResend,
+        options: {
+          emailRedirectTo: `${window.location.origin}`
+        }
+      });
+
+      if (resendError) {
+        throw new Error(resendError.message || 'No se pudo reenviar el correo de confirmación.');
+      }
+
+      setResendFeedback({
+        type: 'success',
+        message: 'Correo de confirmación reenviado exitosamente. Revisa tu bandeja de entrada o carpeta de spam.'
+      });
+    } catch (err) {
+      setResendFeedback({
+        type: 'error',
+        message: err.message || 'Error al solicitar el reenvío del correo.'
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
   if (!settings) return null;
+
+  if (emailSent) {
+    return (
+      <div className="public-register-wrapper fade-in" style={{ maxWidth: '560px', margin: '80px auto' }}>
+        <div className="background-auras">
+          <div className="aura aura-green" />
+          <div className="aura aura-blue" />
+        </div>
+
+        <button 
+          onClick={() => onNavigate('landing')} 
+          className="glass-pill secondary public-register-back-btn"
+          style={{ marginBottom: '24px' }}
+        >
+          <ArrowLeft size={16} />
+          <span>Volver a Inicio</span>
+        </button>
+
+        <GlassCard tint="neutral" style={{ padding: '40px', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(222, 247, 236, 0.8)', border: '1px solid rgba(49, 196, 141, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0e9f6e', margin: '0 auto 20px' }}>
+            <ShieldCheck size={36} />
+          </div>
+
+          <h2 style={{ fontSize: '24px', letterSpacing: '-0.5px', marginBottom: '12px', color: '#111827' }}>
+            ¡Registro recibido! Confirma tu correo
+          </h2>
+
+          <p style={{ color: '#4b5563', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+            Hemos enviado un mensaje de confirmación a: <br />
+            <strong style={{ color: '#1e429f', wordBreak: 'break-all' }}>{formData.email.trim()}</strong>
+          </p>
+
+          <div style={{ background: 'rgba(239, 246, 255, 0.7)', border: '1px solid rgba(191, 219, 254, 0.8)', borderRadius: '16px', padding: '20px', textAlign: 'left', fontSize: '13px', color: '#1e40af', lineHeight: 1.5, marginBottom: '24px' }}>
+            <strong>Siguiente paso obligatorio:</strong>
+            <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
+              <li>Abre tu bandeja de entrada o carpeta de spam.</li>
+              <li>Haz clic en el enlace <strong>"Confirm your signup"</strong>.</li>
+              <li>Al confirmar, regresarás automáticamente a Student Hub para continuar.</li>
+            </ul>
+          </div>
+
+          {resendFeedback && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: resendFeedback.type === 'success' ? 'rgba(222, 247, 236, 0.7)' : 'rgba(253, 232, 232, 0.7)',
+              border: `1px solid ${resendFeedback.type === 'success' ? 'rgba(49, 196, 141, 0.4)' : 'rgba(249, 128, 128, 0.4)'}`,
+              borderRadius: '12px',
+              padding: '12px 16px',
+              color: resendFeedback.type === 'success' ? '#0e9f6e' : '#9b1c1c',
+              fontSize: '13px',
+              marginBottom: '24px',
+              textAlign: 'left',
+              lineHeight: 1.4
+            }}>
+              {resendFeedback.type === 'success' ? <ShieldCheck size={18} style={{ flexShrink: 0 }} /> : <ShieldAlert size={18} style={{ flexShrink: 0 }} />}
+              <span>{resendFeedback.message}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button 
+              type="button"
+              onClick={handleResendEmail}
+              disabled={resendLoading}
+              className="glass-btn secondary"
+              style={{ width: '100%', padding: '12px', justifyContent: 'center', opacity: resendLoading ? 0.7 : 1 }}
+            >
+              <span>{resendLoading ? 'Reenviando correo...' : '¿No recibiste el correo? Reenviar confirmación'}</span>
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => onNavigate('login')} 
+              className="glass-btn primary"
+              style={{ width: '100%', padding: '14px', justifyContent: 'center' }}
+            >
+              <span>Ir al Inicio de Sesión</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="public-register-wrapper fade-in">
@@ -130,8 +283,16 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
 
       <form onSubmit={handleSubmit} className="public-register-form-grid">
         
-        {/* Form panel (Left on desktop, top on mobile) */}
+        {/* Form panel */}
         <GlassCard tint="neutral" className="public-register-card public-register-form-card">
+          
+          {submitError && (
+            <div style={{ display: 'flex', gap: '10px', background: 'rgba(253, 232, 232, 0.6)', border: '1px solid rgba(249, 128, 128, 0.4)', borderRadius: '12px', padding: '12px', color: '#9b1c1c', fontSize: '13px', marginBottom: '20px', lineHeight: 1.4 }}>
+              <ShieldAlert size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <div className="public-register-fields-stack">
             
             {/* Name */}
@@ -298,9 +459,11 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
               <div className="public-register-divider" />
               <button 
                 type="submit" 
+                disabled={loading}
                 className="glass-btn primary public-register-submit-btn"
+                style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
               >
-                <span>Continuar al pago</span>
+                <span>{loading ? 'Creando cuenta...' : 'Crear cuenta e inscribirse'}</span>
                 <ArrowRight size={18} />
               </button>
             </div>
@@ -308,7 +471,7 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
           </div>
         </GlassCard>
 
-        {/* Course Summary Card (Right on desktop, below form on mobile) */}
+        {/* Course Summary Card */}
         <div className="public-register-summary-wrapper">
           <GlassCard tint="blue" className="public-register-card public-register-summary-card">
             <h3 className="public-register-summary-title">
@@ -356,9 +519,11 @@ const PublicRegister = ({ onNavigate, onRegisterSubmit, initialData = {} }) => {
           <div className="public-register-mobile-submit-container">
             <button 
               type="submit" 
+              disabled={loading}
               className="glass-btn primary public-register-submit-btn"
+              style={{ opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
             >
-              <span>Continuar al pago</span>
+              <span>{loading ? 'Creando cuenta...' : 'Crear cuenta e inscribirse'}</span>
               <ArrowRight size={18} />
             </button>
           </div>

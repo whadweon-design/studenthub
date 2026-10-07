@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './services/supabaseClient';
 import { 
   initDB, getCurrentUser, getSettings, getCourses, addEnrollment, logoutUser,
   saveActiveCheckout, getActiveCheckout, clearActiveCheckout, confirmEnrollmentReceipt
@@ -13,13 +14,15 @@ import CoursePanel from './views/student/CoursePanel';
 import SessionPanel from './views/student/SessionPanel';
 import StudentLibrary from './views/student/StudentLibrary';
 import AdminPortal from './views/admin/AdminPortal';
+import logoImg from './assets/logo-nobg.png';
 import { Settings, ShieldCheck } from 'lucide-react';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('landing'); // landing | register | payment | status | login | classroom | admin
+  const [currentPage, setCurrentPage] = useState('landing'); // landing | register | payment | status | login | reset-password | classroom | admin
   const [currentUser, setCurrentUser] = useState(null);
   const [settings, setSettings] = useState(null);
   const [courses, setCourses] = useState([]);
+  const [authLoading, setAuthLoading] = useState(true);
   
   // Registration checkout states
   const [studentRegisterData, setStudentRegisterData] = useState(null);
@@ -30,33 +33,130 @@ function App() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSession, setSelectedSession] = useState(null);
 
-  // Trigger DB initialization & restore persistent checkout if exists
+  // Escuchar eventos de autenticación de Supabase (recuperación de contraseña, cierre de sesión y confirmación de correo)
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setCurrentPage('reset-password');
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        localStorage.removeItem('aula_current_user');
+        setSelectedCourse(null);
+        setSelectedSession(null);
+        setCurrentPage('landing');
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        const activeUser = await restoreUserSession(session.user);
+        if (activeUser) {
+          if (activeUser.isAdmin) {
+            setCurrentPage('admin');
+          } else {
+            setCurrentPage('classroom');
+          }
+        }
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Función helper para consultar public.profiles y verificar rol de forma segura
+  const restoreUserSession = async (sbUser) => {
+    if (!sbUser) {
+      setCurrentUser(null);
+      localStorage.removeItem('aula_current_user');
+      return null;
+    }
+
+    // Consulta de la fila correspondiente en public.profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name, phone, role')
+      .eq('id', sbUser.id)
+      .maybeSingle();
+
+    // Regla de Seguridad: Si la consulta de perfiles falla o no existe el perfil, NO se asume 'student' ni se concede acceso
+    if (profileError || !profile) {
+      console.error('Error de autenticación/restauración: Perfil no encontrado o inaccesible en public.profiles', profileError);
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        // Ignorar error al desloguear usuario sin perfil
+      }
+      setCurrentUser(null);
+      localStorage.removeItem('aula_current_user');
+      return null;
+    }
+
+    // isAdmin se deriva EXCLUSIVAMENTE de profile.role === 'admin'
+    const userRole = profile.role;
+    const isAdmin = userRole === 'admin';
+
+    const activeUser = {
+      id: sbUser.id,
+      email: sbUser.email,
+      name: profile.full_name || sbUser.user_metadata?.full_name || sbUser.email,
+      phone: profile.phone || '',
+      role: userRole,
+      isAdmin: isAdmin,
+      status: 'Inscripción activa'
+    };
+
+    // Espejo transitorio de compatibilidad en localStorage
+    localStorage.setItem('aula_current_user', JSON.stringify(activeUser));
+    setCurrentUser(activeUser);
+    return activeUser;
+  };
+
+  // Restauración de sesión mediante Supabase Auth como fuente de autoridad al iniciar
   useEffect(() => {
     initDB();
     const activeSettings = getSettings();
     setSettings(activeSettings);
     setCourses(getCourses());
     
-    // Check if there is an active logged-in session
-    const active = getCurrentUser();
-    if (active) {
-      setCurrentUser(active);
-      if (active.isAdmin) {
-        setCurrentPage('admin');
-        return;
-      } else if (active.status === 'APROBADA' || active.status === 'Inscripción activa') {
-        setCurrentPage('classroom');
-        return;
-      }
-    }
+    const initializeAuthSession = async () => {
+      setAuthLoading(true);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-    // Restore active checkout state if student was viewing payment transfer instructions
-    const pendingCheckout = getActiveCheckout();
-    if (pendingCheckout && pendingCheckout.studentData && pendingCheckout.step === 'payment') {
-      setStudentRegisterData(pendingCheckout.studentData);
-      setCurrentEnrollmentId(pendingCheckout.enrollmentId);
-      setCurrentPage('payment');
-    }
+        if (session?.user) {
+          const activeUser = await restoreUserSession(session.user);
+          if (activeUser) {
+            if (activeUser.isAdmin) {
+              setCurrentPage('admin');
+            } else {
+              setCurrentPage('classroom');
+            }
+          } else {
+            setCurrentPage('landing');
+          }
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem('aula_current_user');
+
+          // Restaurar borrador de pago si estaba en proceso activo
+          const pendingCheckout = getActiveCheckout();
+          if (pendingCheckout && pendingCheckout.studentData && pendingCheckout.step === 'payment') {
+            setStudentRegisterData(pendingCheckout.studentData);
+            setCurrentEnrollmentId(pendingCheckout.enrollmentId);
+            setCurrentPage('payment');
+          } else {
+            setCurrentPage('landing');
+          }
+        }
+      } catch (err) {
+        console.error('Error al inicializar sesión en Supabase:', err);
+        setCurrentUser(null);
+        localStorage.removeItem('aula_current_user');
+        setCurrentPage('landing');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    initializeAuthSession();
   }, []);
 
   // Update layout when database states change
@@ -138,7 +238,12 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error al cerrar sesión en Supabase Auth:', err);
+    }
     logoutUser();
     setCurrentUser(null);
     setSelectedCourse(null);
@@ -177,6 +282,26 @@ function App() {
     }
     setCurrentPage(pageName);
   };
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', position: 'relative' }}>
+        <div className="background-auras">
+          <div className="aura aura-green" />
+          <div className="aura aura-blue" />
+        </div>
+        <div style={{ textAlign: 'center', zIndex: 10 }}>
+          <img 
+            src={logoImg} 
+            alt="Student Hub Logo" 
+            style={{ width: '64px', height: '64px', marginBottom: '16px', filter: 'drop-shadow(0 6px 16px rgba(63, 131, 248, 0.3))' }} 
+          />
+          <div style={{ fontSize: '16px', fontWeight: 600, color: '#374151' }}>Student Hub</div>
+          <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>Verificando sesión segura...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative', paddingBottom: '80px' }}>
@@ -225,8 +350,9 @@ function App() {
           />
         )}
 
-        {currentPage === 'login' && (
+        {(currentPage === 'login' || currentPage === 'reset-password') && (
           <StudentAuth 
+            initialView={currentPage === 'reset-password' ? 'reset-password' : 'login'}
             onNavigate={(page) => setCurrentPage(page)}
             onLoginSuccess={handleLoginSuccess}
           />
