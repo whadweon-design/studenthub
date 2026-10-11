@@ -24,7 +24,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
   const getWhatsAppLink = () => {
     if (!settings) return '#';
     const cleanNumber = settings.whatsappNumber ? settings.whatsappNumber.replace(/[+\s-]/g, '') : '5641439566';
-    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${settings.price || '950'} MXN\n\nAdjunto mi comprobante de pago.`;
+    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${settings.price || 499} MXN\n\nAdjunto mi comprobante de pago.`;
     return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
   };
 

@@ -20,15 +20,20 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
       }
       const sbUser = authData.user;
 
-      // 2. Obtener el UUID real del curso LEVEL UP
+      // 2. Obtener el UUID y precio real del curso LEVEL UP desde Supabase
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
-        .select('id')
+        .select('id, price')
         .eq('slug', 'level-up')
         .maybeSingle();
 
       if (courseError || !courseData) {
         throw new Error('No se pudo obtener la información del curso LEVEL UP.');
+      }
+
+      const coursePrice = Number(courseData.price);
+      if (isNaN(coursePrice) || coursePrice <= 0) {
+        throw new Error('El precio del curso obtenido desde Supabase no es válido.');
       }
 
       // 3. Consultar la inscripción real desde public.enrollments
@@ -56,7 +61,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
         name: currentUser?.name || sbUser.email,
         email: sbUser.email,
         courseName: 'LEVEL UP: IA para Estudiantes',
-        price: 950
+        price: coursePrice
       });
     } catch (err) {
       console.error('Error al consultar estado:', err);
