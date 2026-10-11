@@ -301,26 +301,12 @@ function App() {
     setCurrentPage('payment');
   };
 
-  const handlePaymentSubmit = ({ receiptFile, paymentMethod }) => {
-    if (currentEnrollmentId) {
-      confirmEnrollmentReceipt(currentEnrollmentId, receiptFile, paymentMethod);
-    } else if (studentRegisterData) {
-      const activeSettings = settings || getSettings();
-      const newEnrollment = addEnrollment({
-        name: studentRegisterData.name,
-        email: studentRegisterData.email,
-        password: studentRegisterData.password,
-        phone: studentRegisterData.phone,
-        paymentMethod: paymentMethod || 'Transferencia Bancaria',
-        price: activeSettings.price,
-        courseName: activeSettings.courseName,
-        status: 'PENDIENTE DE VALIDACIÓN ADMINISTRATIVA',
-        receiptFile
-      });
-      setCurrentEnrollmentId(newEnrollment.id);
+  const handlePaymentSubmit = ({ status, enrollmentId }) => {
+    const updatedStatus = status || 'PENDIENTE_VALIDACION';
+    setCurrentUser(prev => prev ? { ...prev, status: updatedStatus } : prev);
+    if (enrollmentId) {
+      setCurrentEnrollmentId(enrollmentId);
     }
-
-    // Clear active checkout since receipt was explicitly submitted
     clearActiveCheckout();
     setCurrentPage('status');
   };
@@ -443,6 +429,7 @@ function App() {
           <PublicPayment 
             onNavigate={(page) => setCurrentPage(page)}
             studentData={studentRegisterData}
+            currentUser={currentUser}
             onPaymentSubmit={handlePaymentSubmit}
           />
         )}
@@ -450,6 +437,7 @@ function App() {
         {currentPage === 'status' && (
           <PublicStatus 
             enrollmentId={currentEnrollmentId}
+            currentUser={currentUser}
             onNavigate={(page) => {
               refreshAppState();
               setCurrentPage(page);

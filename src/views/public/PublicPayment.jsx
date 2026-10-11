@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
 import GlassCard from '../../components/GlassCard';
-import { ArrowLeft, Check, Clipboard, Send, Upload, FileText, Smartphone } from 'lucide-react';
+import { ArrowLeft, Check, Clipboard, Send, Upload, Smartphone, ShieldAlert } from 'lucide-react';
 
-const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
+const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }) => {
   const [settings, setSettings] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [declaredTransfer, setDeclaredTransfer] = useState(false);
 
   useEffect(() => {
     setSettings(getSettings());
@@ -20,70 +21,84 @@ const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Validate type
-    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      alert('Solo se aceptan comprobantes en formato JPG, PNG o PDF');
-      return;
-    }
-
-    setUploading(true);
-    // Convert to Base64 to save in localStorage database mock
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setUploadedFile({
-        name: file.name,
-        type: file.type,
-        data: reader.result // base64 string
-      });
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const [waOpened, setWaOpened] = useState(false);
-
   const getWhatsAppLink = () => {
     if (!settings) return '#';
-    const cleanNumber = settings.whatsappNumber.replace(/[+\s-]/g, '');
-    const message = `Hola, realicé mi inscripción al curso IA para estudiantes.\n\nNombre: ${studentData?.name || ''}\nCorreo: ${studentData?.email || ''}\nTeléfono: ${studentData?.phone || ''}\nImporte: $${settings.price} MXN\n\nAdjunto mi comprobante de pago.`;
+    const cleanNumber = settings.whatsappNumber ? settings.whatsappNumber.replace(/[+\s-]/g, '') : '5641439566';
+    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${settings.price || '950'} MXN\n\nAdjunto mi comprobante de pago.`;
     return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
   };
 
   const handleWhatsAppClick = () => {
-    setWaOpened(true);
+    // Abrir WhatsApp en una nueva pestaña. NO altera la base de datos ni el estado de inscripción.
     window.open(getWhatsAppLink(), '_blank');
   };
 
-  const handleConfirmWhatsAppSent = () => {
-    setSubmitting(true);
-    setTimeout(() => {
-      onPaymentSubmit({
-        receiptFile: 'whatsapp_receipt',
-        paymentMethod: 'Transferencia (WhatsApp)'
-      });
-      setSubmitting(false);
-    }, 600);
-  };
+  const handleConfirmWhatsAppSent = async () => {
+    if (submitting) return;
 
-  const handleUploadSubmit = () => {
-    if (!uploadedFile) {
-      alert('Por favor selecciona un archivo antes de continuar.');
+    if (!declaredTransfer) {
+      setError('Por favor marca la casilla declarando que realizaste la transferencia y enviaste tu comprobante.');
       return;
     }
+
     setSubmitting(true);
-    setTimeout(() => {
+    setError('');
+
+    try {
+      // 1. Obtener usuario autenticado de Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        throw new Error('No se pudo verificar la sesión activa. Por favor vuelve a iniciar sesión.');
+      }
+      const sbUser = authData.user;
+
+      // 2. Obtener el UUID real del curso LEVEL UP
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('id')
+        .eq('slug', 'level-up')
+        .maybeSingle();
+
+      if (courseError || !courseData) {
+        throw new Error('No se pudo obtener la información del curso LEVEL UP desde Supabase.');
+      }
+
+      // 3. Ejecutar el UPDATE estricto en public.enrollments
+      // NOTA CRÍTICA DE SEGURIDAD: El trigger real enforce_enrollment_update_rules() prohíbe al estudiante
+      // modificar submitted_at, processed_at, processed_by, created_at o updated_at.
+      // El payload debe contener EXCLUSIVAMENTE status y payment_method.
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('enrollments')
+        .update({
+          status: 'PENDIENTE_VALIDACION',
+          payment_method: 'Transferencia (WhatsApp)'
+        })
+        .eq('user_id', sbUser.id)
+        .eq('course_id', courseData.id)
+        .eq('status', 'REGISTRO_INICIADO')
+        .select('id, status');
+
+      if (updateError) {
+        console.error('Error al actualizar estado de inscripción en Supabase:', updateError);
+        throw new Error(`Error de base de datos: ${updateError.message || 'No se pudo registrar la confirmación del pago.'}`);
+      }
+
+      // 4. Verificación estricta: Exigir exactamente 1 fila actualizada con status 'PENDIENTE_VALIDACION'
+      if (!updatedRows || updatedRows.length !== 1 || updatedRows[0].status !== 'PENDIENTE_VALIDACION') {
+        throw new Error('No se encontró una inscripción en estado REGISTRO_INICIADO para actualizar. Es posible que el estado ya haya cambiado.');
+      }
+
+      // 5. Éxito confirmado por la respuesta de Supabase
       onPaymentSubmit({
-        receiptFile: uploadedFile.data,
-        receiptFileName: uploadedFile.name,
-        paymentMethod: 'Transferencia (Subida Directa)'
+        status: 'PENDIENTE_VALIDACION',
+        enrollmentId: updatedRows[0].id
       });
+    } catch (err) {
+      console.error('Error en confirmación de pago:', err);
+      setError(err.message || 'Error al procesar la confirmación del pago.');
+    } finally {
       setSubmitting(false);
-    }, 1000);
+    }
   };
 
   if (!settings) return null;
@@ -100,19 +115,26 @@ const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
 
       {/* Navigation */}
       <button 
-        onClick={() => onNavigate('register')} 
+        onClick={() => onNavigate('landing')} 
         className="glass-pill secondary" 
         style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '30px' }}
       >
         <ArrowLeft size={16} />
-        <span>Atrás</span>
+        <span>Ir a Inicio</span>
       </button>
 
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <span className="glass-pill blue" style={{ marginBottom: '12px', pointerEvents: 'none' }}>PASO 2 DE 2</span>
         <h1 style={{ fontSize: '32px', letterSpacing: '-0.8px', marginBottom: '8px' }}>Método de pago</h1>
-        <p style={{ color: '#6b7280' }}>Realiza la transferencia bancaria y envía tu comprobante.</p>
+        <p style={{ color: '#6b7280' }}>Realiza la transferencia bancaria y envía tu comprobante para validación.</p>
       </div>
+
+      {error && (
+        <div style={{ display: 'flex', gap: '10px', background: 'rgba(253, 232, 232, 0.7)', border: '1px solid rgba(249, 128, 128, 0.4)', borderRadius: '12px', padding: '14px', color: '#9b1c1c', fontSize: '13px', marginBottom: '24px', lineHeight: 1.4 }}>
+          <ShieldAlert size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Payment Information Card */}
       <GlassCard tint="blue" style={{ padding: '30px', marginBottom: '30px' }}>
@@ -189,14 +211,14 @@ const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
             <div>
               <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>Concepto sugerido</span>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>
-                {studentData?.name ? studentData.name : (settings.bankConcept || 'Nombre Completo del Alumno')}
+                {studentData?.name || currentUser?.name || (settings.bankConcept || 'Nombre Completo del Alumno')}
               </div>
               <span style={{ fontSize: '12px', color: '#4b5563', fontStyle: 'italic', marginTop: '2px', display: 'block' }}>
                 (Utiliza tu <strong>Nombre Completo</strong> como concepto al hacer la transferencia)
               </span>
             </div>
             <button 
-              onClick={() => copyToClipboard(studentData?.name || settings.bankConcept || 'Nombre Completo del Alumno', 'concept')} 
+              onClick={() => copyToClipboard(studentData?.name || currentUser?.name || settings.bankConcept || 'Nombre Completo del Alumno', 'concept')} 
               className="glass-pill" 
               style={{ padding: '6px 12px', fontSize: '12px' }}
             >
@@ -231,7 +253,7 @@ const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
       </GlassCard>
 
       {/* Confirmation Options Container */}
-      <h3 style={{ fontSize: '18px', marginBottom: '18px', textAlign: 'center' }}>¿Cómo deseas enviar tu comprobante?</h3>
+      <h3 style={{ fontSize: '18px', marginBottom: '18px', textAlign: 'center' }}>Confirmación de Pago</h3>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flexWrap: 'wrap' }}>
         
@@ -240,84 +262,61 @@ const PublicPayment = ({ onNavigate, studentData, onPaymentSubmit }) => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#03543f', fontWeight: 700, fontSize: '16px', marginBottom: '10px' }}>
               <Smartphone size={20} />
-              <span>Opción A: WhatsApp</span>
+              <span>Opción A: Notificación por WhatsApp</span>
             </div>
             <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
-              Envía tu captura de pantalla de forma instantánea a nuestro WhatsApp administrativo (<strong>{settings.whatsappNumber || '5641439566'}</strong>).
+              Envía tu comprobante de transferencia al WhatsApp administrativo (<strong>{settings.whatsappNumber || '5641439566'}</strong>).
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <button 
+              type="button"
               onClick={handleWhatsAppClick}
               className="glass-pill mint" 
               style={{ width: '100%', padding: '12px', justifyContent: 'center', gap: '8px', border: '1px solid rgba(255,255,255,0.8)' }}
             >
               <Send size={15} />
-              <span>Abrir WhatsApp ({settings.whatsappNumber || '5641439566'})</span>
+              <span>1. Abrir WhatsApp ({settings.whatsappNumber || '5641439566'})</span>
             </button>
 
+            {/* Declaración explícita obligatoria */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', color: '#1f2937', cursor: 'pointer', background: 'rgba(255,255,255,0.5)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.7)' }}>
+              <input 
+                type="checkbox"
+                checked={declaredTransfer}
+                onChange={(e) => setDeclaredTransfer(e.target.checked)}
+                style={{ marginTop: '2px', cursor: 'pointer' }}
+              />
+              <span>Declaro que realicé la transferencia bancaria y envié mi comprobante por WhatsApp.</span>
+            </label>
+
             <button 
+              type="button"
               onClick={handleConfirmWhatsAppSent}
-              disabled={submitting}
+              disabled={submitting || !declaredTransfer}
               className="glass-btn primary"
-              style={{ width: '100%', padding: '10px', fontSize: '13px' }}
+              style={{ width: '100%', padding: '12px', fontSize: '13px', opacity: (submitting || !declaredTransfer) ? 0.6 : 1, cursor: (submitting || !declaredTransfer) ? 'not-allowed' : 'pointer' }}
             >
-              <span>{submitting ? 'Procesando...' : 'Ya envié mi comprobante por WhatsApp'}</span>
+              <span>{submitting ? 'Registrando en Supabase...' : '2. Confirmar declaración de pago'}</span>
             </button>
           </div>
         </GlassCard>
 
-        {/* Option B: Upload Comprobante */}
-        <GlassCard tint="neutral" style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between' }}>
+        {/* Option B: Upload Comprobante (Temporariamente Deshabilitado) */}
+        <GlassCard tint="neutral" style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between', opacity: 0.85 }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1f2937', fontWeight: 700, fontSize: '16px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563', fontWeight: 700, fontSize: '16px', marginBottom: '10px' }}>
               <Upload size={20} />
-              <span>Opción B: Subir comprobante</span>
+              <span>Opción B: Subida directa</span>
             </div>
             <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
-              Carga tu archivo (PDF, JPG, PNG) directamente a la plataforma para validación administrativa interna.
+              La carga directa de archivos se encuentra en mantenimiento técnico para configurar almacenamiento privado seguro.
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {!uploadedFile ? (
-              <label 
-                className="glass-pill" 
-                style={{ width: '100%', padding: '12px', justifyContent: 'center', gap: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.8)', fontSize: '13px' }}
-              >
-                <Upload size={15} />
-                <span>{uploading ? 'Procesando...' : 'Seleccionar comprobante'}</span>
-                <input 
-                  type="file" 
-                  accept="image/jpeg,image/png,application/pdf"
-                  onChange={handleFileChange}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.5)', padding: '8px 12px', borderRadius: '12px', fontSize: '13px', overflow: 'hidden' }}>
-                  <FileText size={16} style={{ color: '#3f83f8', flexShrink: 0 }} />
-                  <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', flex: 1 }}>{uploadedFile.name}</span>
-                  <button 
-                    onClick={() => setUploadedFile(null)} 
-                    style={{ background: 'none', border: 'none', color: '#b91c1c', fontWeight: 'bold', cursor: 'pointer', padding: '0 4px' }}
-                  >
-                    ×
-                  </button>
-                </div>
-                
-                <button 
-                  onClick={handleUploadSubmit}
-                  disabled={submitting}
-                  className="glass-btn primary"
-                  style={{ width: '100%', padding: '10px', fontSize: '13px' }}
-                >
-                  <span>{submitting ? 'Enviando...' : 'Confirmar Envío'}</span>
-                </button>
-              </div>
-            )}
+          <div style={{ background: 'rgba(239, 246, 255, 0.8)', border: '1px solid rgba(191, 219, 254, 0.9)', borderRadius: '12px', padding: '14px', fontSize: '12px', color: '#1e40af', lineHeight: 1.4 }}>
+            Por favor utiliza la <strong>Opción A (WhatsApp)</strong> para notificar tu transferencia bancaria a la administración.
           </div>
         </GlassCard>
 
