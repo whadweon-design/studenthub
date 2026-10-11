@@ -137,7 +137,7 @@ function App() {
       // 2. Para usuario estudiante: consultar el UUID real del curso LEVEL UP en public.courses mediante slug = 'level-up'
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
-        .select('id, title, price_mxn')
+        .select('id')
         .eq('slug', 'level-up')
         .maybeSingle();
 
