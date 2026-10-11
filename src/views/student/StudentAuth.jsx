@@ -34,6 +34,8 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
       setCheckingRecoverySession(true);
       const hash = window.location.hash || '';
       const search = window.location.search || '';
+
+      // 1. Si la URL contiene un error explícito de Supabase (token expirado, enlace ya usado)
       if (hash.includes('error=') || search.includes('error=')) {
         setError('El enlace de recuperación es inválido o ha expirado. Por favor solicita uno nuevo.');
         setHasValidRecoverySession(false);
@@ -41,15 +43,54 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
         return;
       }
 
-      supabase.auth.getSession().then(({ data, error: sessionErr }) => {
-        if (sessionErr || !data?.session?.user) {
-          setError('No se detectó una sesión activa de recuperación. El enlace puede haber expirado o ser inválido.');
-          setHasValidRecoverySession(false);
-        } else {
+      const hasRecoveryEvidence = hash.includes('type=recovery') || 
+                                   search.includes('type=recovery') || 
+                                   hash.includes('access_token=') ||
+                                   hash.includes('reset-password');
+
+      let resolved = false;
+
+      const finishValidation = (isValid, errorMsg = '') => {
+        if (resolved) return;
+        resolved = true;
+        if (isValid) {
           setHasValidRecoverySession(true);
+          setError('');
+        } else {
+          setHasValidRecoverySession(false);
+          setError(errorMsg || 'No se detectó una sesión activa de recuperación. El enlace puede haber expirado o ser inválido.');
         }
         setCheckingRecoverySession(false);
+      };
+
+      // 2. Escuchar activamente onAuthStateChange para capturar PASSWORD_RECOVERY o la sesión generada
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY' && session?.user) {
+          finishValidation(true);
+        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user && hasRecoveryEvidence) {
+          finishValidation(true);
+        }
       });
+
+      // 3. Comprobar sesión actual por si ya fue resuelta antes de montar el listener
+      supabase.auth.getSession().then(({ data, error: sessionErr }) => {
+        if (!sessionErr && data?.session?.user && hasRecoveryEvidence) {
+          finishValidation(true);
+        }
+      });
+
+      // 4. Temporizador de gracia (2.5s) para permitir que Supabase procese el hash de forma asíncrona
+      const timeoutId = setTimeout(() => {
+        if (!resolved) {
+          finishValidation(false, 'No se detectó una sesión activa de recuperación. El enlace puede haber expirado o ser inválido.');
+        }
+      }, 2500);
+
+      return () => {
+        resolved = true;
+        clearTimeout(timeoutId);
+        authListener?.subscription?.unsubscribe();
+      };
     } else {
       setCheckingRecoverySession(false);
     }
@@ -149,7 +190,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}#reset-password`
+        redirectTo: `${window.location.origin}`
       });
 
       if (resetError) {
@@ -263,7 +304,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
           </p>
         </div>
 
-        {error && (
+        {error && !(view === 'reset-password' && !hasValidRecoverySession) && (
           <div style={{ display: 'flex', gap: '10px', background: 'rgba(253, 232, 232, 0.6)', border: '1px solid rgba(249, 128, 128, 0.4)', borderRadius: '12px', padding: '12px', color: '#9b1c1c', fontSize: '13px', marginBottom: '20px', lineHeight: 1.4 }}>
             <ShieldAlert size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>{error}</span>
