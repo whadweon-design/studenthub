@@ -23,6 +23,7 @@ function App() {
   const [settings, setSettings] = useState(null);
   const [courses, setCourses] = useState([]);
   const [authLoading, setAuthLoading] = useState(true);
+  const isRecoveryRef = React.useRef(false);
   
   // Registration checkout states
   const [studentRegisterData, setStudentRegisterData] = useState(null);
@@ -44,13 +45,34 @@ function App() {
 
     let isMounted = true;
 
+    // Detectar si la URL contiene parámetros o indicadores de recuperación de contraseña
+    const currentHash = window.location.hash || '';
+    const currentSearch = window.location.search || '';
+    const hasRecoveryIndicator = currentHash.includes('type=recovery') || 
+                                 currentHash.includes('reset-password') || 
+                                 currentSearch.includes('type=recovery');
+
+    if (hasRecoveryIndicator) {
+      isRecoveryRef.current = true;
+      setCurrentPage('reset-password');
+    }
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
       if (event === 'PASSWORD_RECOVERY') {
+        isRecoveryRef.current = true;
         setCurrentPage('reset-password');
         setAuthLoading(false);
       } else if (event === 'SIGNED_OUT' || !session?.user) {
+        if (isRecoveryRef.current) {
+          // Si el usuario intentó recuperar contraseña pero el enlace es inválido/expirado,
+          // se mantiene la vista reset-password para que StudentAuth informe y permita solicitar uno nuevo.
+          setCurrentPage('reset-password');
+          setAuthLoading(false);
+          return;
+        }
+
         setCurrentUser(null);
         localStorage.removeItem('aula_current_user');
         setSelectedCourse(null);
@@ -67,6 +89,16 @@ function App() {
         }
         setAuthLoading(false);
       } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+        if (isRecoveryRef.current) {
+          // Sesión activa generada a partir de un enlace de recuperación.
+          // PROTEGER: Impedir que restoreUserSession() sobrescriba la navegación hacia landing, payment o classroom.
+          setCurrentPage('reset-password');
+          if (isMounted) {
+            setAuthLoading(false);
+          }
+          return;
+        }
+
         await restoreUserSession(session.user);
         if (isMounted) {
           setAuthLoading(false);
@@ -448,7 +480,16 @@ function App() {
         {(currentPage === 'login' || currentPage === 'reset-password') && (
           <StudentAuth 
             initialView={currentPage === 'reset-password' ? 'reset-password' : 'login'}
-            onNavigate={(page) => setCurrentPage(page)}
+            onNavigate={(page) => {
+              if (page === 'login' || page === 'landing') {
+                isRecoveryRef.current = false;
+              }
+              setCurrentPage(page);
+            }}
+            onRecoveryComplete={() => {
+              isRecoveryRef.current = false;
+              setCurrentPage('login');
+            }}
             onLoginSuccess={handleLoginSuccess}
           />
         )}

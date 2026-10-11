@@ -4,7 +4,7 @@ import GlassCard from '../../components/GlassCard';
 import logoImg from '../../assets/logo-nobg.png';
 import { Key, Mail, Lock, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 
-const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
+const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialView = 'login' }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -17,13 +17,39 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
   const [isUnconfirmedUser, setIsUnconfirmedUser] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendFeedback, setResendFeedback] = useState(null);
+  const [checkingRecoverySession, setCheckingRecoverySession] = useState(false);
+  const [hasValidRecoverySession, setHasValidRecoverySession] = useState(true);
 
   useEffect(() => {
     setView(initialView);
     setError('');
     setIsUnconfirmedUser(false);
     setResendFeedback(null);
-  }, [initialView]);
+
+    if (initialView === 'reset-password' || view === 'reset-password') {
+      setCheckingRecoverySession(true);
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      if (hash.includes('error=') || search.includes('error=')) {
+        setError('El enlace de recuperación es inválido o ha expirado. Por favor solicita uno nuevo.');
+        setHasValidRecoverySession(false);
+        setCheckingRecoverySession(false);
+        return;
+      }
+
+      supabase.auth.getSession().then(({ data, error: sessionErr }) => {
+        if (sessionErr || !data?.session?.user) {
+          setError('No se detectó una sesión activa de recuperación. El enlace puede haber expirado o ser inválido.');
+          setHasValidRecoverySession(false);
+        } else {
+          setHasValidRecoverySession(true);
+        }
+        setCheckingRecoverySession(false);
+      });
+    } else {
+      setCheckingRecoverySession(false);
+    }
+  }, [initialView, view]);
 
   const handleResendEmail = async () => {
     if (resendLoading) return;
@@ -119,7 +145,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
 
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}`
+        redirectTo: `${window.location.origin}#reset-password`
       });
 
       if (resetError) {
@@ -131,6 +157,25 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
       setError(err.message || 'Error al solicitar la recuperación de contraseña.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExitRecovery = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      // Ignorar error al cerrar sesión temporal
+    }
+    if (window.location.hash || window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    setView('login');
+    setPasswordUpdated(false);
+    setError('');
+    if (onRecoveryComplete) {
+      onRecoveryComplete();
+    } else {
+      onNavigate('login');
     }
   };
 
@@ -400,88 +445,124 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, initialView = 'login' }) => {
 
         {view === 'reset-password' && (
           /* New Password Input View (from Supabase Auth recovery link) */
-          <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {passwordUpdated ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', background: 'rgba(222, 247, 236, 0.6)', border: '1px solid rgba(49, 196, 141, 0.4)', borderRadius: '16px', padding: '24px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#def7ec', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0e9f6e' }}>
-                  <ShieldCheck size={28} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', color: '#03543f', marginBottom: '6px' }}>¡Contraseña actualizada!</h3>
-                  <p style={{ fontSize: '13px', color: '#046c4e', lineHeight: 1.4 }}>
-                    Tu contraseña ha sido modificada con éxito en Supabase Auth. Ya puedes iniciar sesión con tu nueva clave.
-                  </p>
-                </div>
-                <button 
-                  type="button" 
-                  onClick={() => { setView('login'); setPasswordUpdated(false); setError(''); onNavigate('login'); }}
-                  className="glass-btn primary"
-                  style={{ width: '100%', padding: '12px' }}
-                >
-                  Iniciar sesión ahora
-                </button>
+          checkingRecoverySession ? (
+            <div style={{ textAlign: 'center', padding: '30px 10px', color: '#4b5563', fontSize: '14px' }}>
+              Verificando enlace de recuperación seguro...
+            </div>
+          ) : !hasValidRecoverySession ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(253, 232, 232, 0.7)', border: '1px solid rgba(249, 128, 128, 0.4)', borderRadius: '12px', padding: '16px', color: '#9b1c1c', fontSize: '13px', lineHeight: 1.5, textAlign: 'left' }}>
+                <ShieldAlert size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
+                <span>{error || 'El enlace de recuperación es inválido o ha expirado. Por favor solicita uno nuevo.'}</span>
               </div>
-            ) : (
-              <>
-                {/* Nueva Contraseña */}
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
-                    Nueva contraseña
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
-                    <input 
-                      type="password" 
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••" 
-                      className="glass-input"
-                      style={{ paddingLeft: '44px' }}
-                    />
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (window.location.hash || window.location.search) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                  }
+                  setView('recovery');
+                  setRecoverySent(false);
+                  setError('');
+                }}
+                className="glass-btn primary"
+                style={{ width: '100%', padding: '12px' }}
+              >
+                Solicitar nuevo enlace de recuperación
+              </button>
+              <button 
+                type="button" 
+                onClick={handleExitRecovery}
+                className="glass-btn secondary"
+                style={{ width: '100%', padding: '10px' }}
+              >
+                Regresar al inicio de sesión
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {passwordUpdated ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', textAlign: 'center', background: 'rgba(222, 247, 236, 0.6)', border: '1px solid rgba(49, 196, 141, 0.4)', borderRadius: '16px', padding: '24px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#def7ec', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0e9f6e' }}>
+                    <ShieldCheck size={28} />
                   </div>
-                </div>
-
-                {/* Confirmar Contraseña */}
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
-                    Confirmar nueva contraseña
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
-                    <input 
-                      type="password" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••" 
-                      className="glass-input"
-                      style={{ paddingLeft: '44px' }}
-                    />
+                  <div>
+                    <h3 style={{ fontSize: '18px', color: '#03543f', marginBottom: '6px' }}>¡Contraseña actualizada!</h3>
+                    <p style={{ fontSize: '13px', color: '#046c4e', lineHeight: 1.4 }}>
+                      Tu contraseña ha sido modificada con éxito en Supabase Auth. Ya puedes iniciar sesión con tu nueva clave.
+                    </p>
                   </div>
+                  <button 
+                    type="button" 
+                    onClick={handleExitRecovery}
+                    className="glass-btn primary"
+                    style={{ width: '100%', padding: '12px' }}
+                  >
+                    Iniciar sesión ahora
+                  </button>
                 </div>
+              ) : (
+                <>
+                  {/* Nueva Contraseña */}
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
+                      Nueva contraseña
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
+                      <input 
+                        type="password" 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••" 
+                        className="glass-input"
+                        style={{ paddingLeft: '44px' }}
+                      />
+                    </div>
+                  </div>
 
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="glass-btn primary"
-                  style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-                >
-                  <span>{loading ? 'Actualizando...' : 'Guardar nueva contraseña'}</span>
-                  <Key size={16} />
-                </button>
+                  {/* Confirmar Contraseña */}
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: '#374151' }}>
+                      Confirmar nueva contraseña
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={16} style={{ position: 'absolute', left: '16px', top: '16px', color: '#9ca3af' }} />
+                      <input 
+                        type="password" 
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••" 
+                        className="glass-input"
+                        style={{ paddingLeft: '44px' }}
+                      />
+                    </div>
+                  </div>
 
-                <button 
-                  type="button" 
-                  onClick={() => { setView('login'); setError(''); onNavigate('login'); }}
-                  className="glass-btn secondary"
-                  style={{ padding: '10px', width: '100%' }}
-                >
-                  Cancelar
-                </button>
-              </>
-            )}
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="glass-btn primary"
+                    style={{ padding: '14px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '10px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                  >
+                    <span>{loading ? 'Actualizando...' : 'Guardar nueva contraseña'}</span>
+                    <Key size={16} />
+                  </button>
 
-          </form>
+                  <button 
+                    type="button" 
+                    onClick={handleExitRecovery}
+                    className="glass-btn secondary"
+                    style={{ padding: '10px', width: '100%' }}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              )}
+
+            </form>
+          )
         )}
 
       </GlassCard>
