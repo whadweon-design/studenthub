@@ -20,13 +20,17 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
   const [checkingRecoverySession, setCheckingRecoverySession] = useState(false);
   const [hasValidRecoverySession, setHasValidRecoverySession] = useState(true);
 
+  // Sincronizar vista si initialView cambia desde el enrutador padre (App.jsx)
   useEffect(() => {
     setView(initialView);
     setError('');
     setIsUnconfirmedUser(false);
     setResendFeedback(null);
+  }, [initialView]);
 
-    if (initialView === 'reset-password' || view === 'reset-password') {
+  // Verificar la validez de la sesión de recuperación si la vista activa es reset-password
+  useEffect(() => {
+    if (view === 'reset-password') {
       setCheckingRecoverySession(true);
       const hash = window.location.hash || '';
       const search = window.location.search || '';
@@ -49,7 +53,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
     } else {
       setCheckingRecoverySession(false);
     }
-  }, [initialView, view]);
+  }, [view]);
 
   const handleResendEmail = async () => {
     if (resendLoading) return;

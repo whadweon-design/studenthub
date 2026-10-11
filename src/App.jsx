@@ -85,7 +85,14 @@ function App() {
           setCurrentEnrollmentId(pendingCheckout.enrollmentId);
           setCurrentPage('payment');
         } else {
-          setCurrentPage('landing');
+          // Si el visitante se encuentra navegando legítimamente en una pantalla pública de autenticación (login, register),
+          // conservar dicha vista para evitar expulsarlo involuntariamente a la landing page.
+          setCurrentPage((prevPage) => {
+            if (prevPage === 'login' || prevPage === 'register') {
+              return prevPage;
+            }
+            return 'landing';
+          });
         }
         setAuthLoading(false);
       } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
