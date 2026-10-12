@@ -13,6 +13,8 @@ const AdminPortal = ({ onBack }) => {
   const [enrollments, setEnrollments] = useState([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(false);
   const [enrollmentsError, setEnrollmentsError] = useState('');
+  const [processingId, setProcessingId] = useState(null);
+  const [actionFeedback, setActionFeedback] = useState(null);
   const [settings, setSettings] = useState(null);
   const [students, setStudents] = useState([]);
 
@@ -168,12 +170,153 @@ const AdminPortal = ({ onBack }) => {
     }
   };
 
-  const handleApprove = (_id) => {
-    // Deshabilitado en Etapa 1 (solo lectura de Supabase)
+  const handleApprove = async (enrollment) => {
+    if (!enrollment || enrollment.status !== 'PENDIENTE_VALIDACION') {
+      alert('Solo es posible procesar solicitudes con estado PENDIENTE_VALIDACION.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `⚠️ ATENCIÓN: Estás a punto de APROBAR la inscripción de "${enrollment.studentName}".\n\n` +
+      `Asegúrate de haber verificado previamente el comprobante o depósito bancario correspondiente ($${enrollment.price} MXN).\n\n` +
+      `¿Confirmas la APROBACIÓN de esta inscripción?`
+    );
+    if (!confirmed) return;
+
+    setProcessingId(enrollment.id);
+    setActionFeedback(null);
+
+    try {
+      // 1. Validar sesión activa del administrador en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        throw new Error('No se detectó una sesión activa de administrador. Inicia sesión nuevamente.');
+      }
+      const adminUser = authData.user;
+
+      // 2. Validar rol 'admin' en public.profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', adminUser.id)
+        .maybeSingle();
+
+      if (profileError || !profile || profile.role !== 'admin') {
+        throw new Error('Permisos insuficientes: Se requiere rol de administrador (CEO) para aprobar inscripciones.');
+      }
+
+      // 3. Ejecutar UPDATE seguro en public.enrollments
+      const nowIso = new Date().toISOString();
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('enrollments')
+        .update({
+          status: 'APROBADA',
+          processed_at: nowIso,
+          processed_by: adminUser.id
+        })
+        .eq('id', enrollment.id)
+        .eq('status', 'PENDIENTE_VALIDACION')
+        .select('id, status, processed_at, processed_by');
+
+      if (updateError) {
+        throw new Error(updateError.message || 'Error al actualizar la inscripción en Supabase.');
+      }
+
+      if (!updatedRows || updatedRows.length !== 1) {
+        throw new Error('No se pudo actualizar la inscripción. Es posible que el estado ya haya cambiado en otra sesión.');
+      }
+
+      setActionFeedback({
+        type: 'success',
+        message: `¡Inscripción de "${enrollment.studentName}" APROBADA con éxito! Se ha habilitado su acceso al Aula Virtual.`
+      });
+
+      // Recargar inscripciones desde Supabase
+      await fetchEnrollments();
+    } catch (err) {
+      console.error('Error al aprobar inscripción:', err);
+      setActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al procesar la aprobación de la inscripción.'
+      });
+      await fetchEnrollments();
+    } finally {
+      setProcessingId(null);
+    }
   };
 
-  const handleReject = (_id) => {
-    // Deshabilitado en Etapa 1 (solo lectura de Supabase)
+  const handleReject = async (enrollment) => {
+    if (!enrollment || enrollment.status !== 'PENDIENTE_VALIDACION') {
+      alert('Solo es posible procesar solicitudes con estado PENDIENTE_VALIDACION.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas RECHAZAR la solicitud de inscripción de "${enrollment.studentName}"?\n\n` +
+      `Esta acción actualizará el estado de la inscripción a RECHAZADA en la base de datos.`
+    );
+    if (!confirmed) return;
+
+    setProcessingId(enrollment.id);
+    setActionFeedback(null);
+
+    try {
+      // 1. Validar sesión activa del administrador en Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData?.user) {
+        throw new Error('No se detectó una sesión activa de administrador. Inicia sesión nuevamente.');
+      }
+      const adminUser = authData.user;
+
+      // 2. Validar rol 'admin' en public.profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', adminUser.id)
+        .maybeSingle();
+
+      if (profileError || !profile || profile.role !== 'admin') {
+        throw new Error('Permisos insuficientes: Se requiere rol de administrador (CEO) para rechazar inscripciones.');
+      }
+
+      // 3. Ejecutar UPDATE seguro en public.enrollments
+      const nowIso = new Date().toISOString();
+      const { data: updatedRows, error: updateError } = await supabase
+        .from('enrollments')
+        .update({
+          status: 'RECHAZADA',
+          processed_at: nowIso,
+          processed_by: adminUser.id
+        })
+        .eq('id', enrollment.id)
+        .eq('status', 'PENDIENTE_VALIDACION')
+        .select('id, status, processed_at, processed_by');
+
+      if (updateError) {
+        throw new Error(updateError.message || 'Error al actualizar la inscripción en Supabase.');
+      }
+
+      if (!updatedRows || updatedRows.length !== 1) {
+        throw new Error('No se pudo actualizar la inscripción. Es posible que el estado ya haya cambiado en otra sesión.');
+      }
+
+      setActionFeedback({
+        type: 'success',
+        message: `Inscripción de "${enrollment.studentName}" marcada como RECHAZADA en la base de datos.`
+      });
+
+      // Recargar inscripciones desde Supabase
+      await fetchEnrollments();
+    } catch (err) {
+      console.error('Error al rechazar inscripción:', err);
+      setActionFeedback({
+        type: 'error',
+        message: err.message || 'Error al procesar el rechazo de la inscripción.'
+      });
+      await fetchEnrollments();
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleSaveSettings = (e) => {
@@ -353,6 +496,26 @@ const AdminPortal = ({ onBack }) => {
             </button>
           </div>
 
+          {/* Action Feedback Message */}
+          {actionFeedback && (
+            <GlassCard
+              tint={actionFeedback.type === 'success' ? 'mint' : 'coral'}
+              style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: actionFeedback.type === 'success' ? '#03543f' : '#9b1c1c' }}>
+                {actionFeedback.type === 'success' ? <Check size={20} /> : <ShieldAlert size={20} />}
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{actionFeedback.message}</span>
+              </div>
+              <button
+                onClick={() => setActionFeedback(null)}
+                className="glass-pill secondary"
+                style={{ padding: '4px 12px', fontSize: '11px' }}
+              >
+                Cerrar
+              </button>
+            </GlassCard>
+          )}
+
           {/* Error Message */}
           {enrollmentsError && (
             <GlassCard tint="coral" style={{ padding: '20px' }}>
@@ -450,29 +613,66 @@ const AdminPortal = ({ onBack }) => {
                       {env.status}
                     </span>
 
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                      <button
-                        disabled={true}
-                        className="glass-pill mint"
-                        style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.5, cursor: 'not-allowed' }}
-                        title="Deshabilitado en Etapa 1 (solo lectura)"
-                      >
-                        <Check size={14} />
-                        <span>Aprobar inscripción</span>
-                      </button>
-                      <button
-                        disabled={true}
-                        className="glass-pill coral"
-                        style={{ padding: '8px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, opacity: 0.5, cursor: 'not-allowed' }}
-                        title="Deshabilitado en Etapa 1 (solo lectura)"
-                      >
-                        <X size={14} />
-                        <span>Rechazar inscripción</span>
-                      </button>
-                    </div>
-                    <span style={{ fontSize: '10px', color: '#9ca3af', fontStyle: 'italic' }}>
-                      Acciones deshabilitadas en Etapa 1 (solo lectura)
-                    </span>
+                    {env.status === 'PENDIENTE_VALIDACION' && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                        <button
+                          onClick={() => handleApprove(env)}
+                          disabled={processingId !== null}
+                          className="glass-pill mint"
+                          style={{
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600,
+                            opacity: processingId !== null ? 0.6 : 1,
+                            cursor: processingId !== null ? 'not-allowed' : 'pointer'
+                          }}
+                          title="Aprobar inscripción tras verificar comprobante de pago"
+                        >
+                          <Check size={14} />
+                          <span>{processingId === env.id ? 'Aprobando...' : 'Aprobar inscripción'}</span>
+                        </button>
+                        <button
+                          onClick={() => handleReject(env)}
+                          disabled={processingId !== null}
+                          className="glass-pill coral"
+                          style={{
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontWeight: 600,
+                            opacity: processingId !== null ? 0.6 : 1,
+                            cursor: processingId !== null ? 'not-allowed' : 'pointer'
+                          }}
+                          title="Rechazar inscripción"
+                        >
+                          <X size={14} />
+                          <span>{processingId === env.id ? 'Rechazando...' : 'Rechazar inscripción'}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {env.status === 'APROBADA' && (
+                      <span style={{ fontSize: '11px', color: '#03543f', fontWeight: 600, marginTop: '4px' }}>
+                        ✓ Inscripción validada y habilitada
+                      </span>
+                    )}
+
+                    {env.status === 'RECHAZADA' && (
+                      <span style={{ fontSize: '11px', color: '#9b1c1c', fontWeight: 600, marginTop: '4px' }}>
+                        ✕ Inscripción rechazada
+                      </span>
+                    )}
+
+                    {env.status === 'REGISTRO_INICIADO' && (
+                      <span style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '4px' }}>
+                        Esperando confirmación de pago del alumno
+                      </span>
+                    )}
                   </div>
 
                 </div>
