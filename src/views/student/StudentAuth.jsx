@@ -4,7 +4,7 @@ import GlassCard from '../../components/GlassCard';
 import logoImg from '../../assets/logo-nobg.png';
 import { Key, Mail, Lock, ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 
-const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialView = 'login' }) => {
+const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialView = 'login', isRecoveryMode = false }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -43,10 +43,10 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
         return;
       }
 
-      const hasRecoveryEvidence = hash.includes('type=recovery') || 
-                                   search.includes('type=recovery') || 
-                                   hash.includes('access_token=') ||
-                                   hash.includes('reset-password');
+      // Evidencia legítima del flujo de recuperación (certificado por App.jsx o presente en la URL)
+      const hasRecoveryEvidence = isRecoveryMode ||
+                                  hash.includes('type=recovery') ||
+                                  search.includes('type=recovery');
 
       let resolved = false;
 
@@ -72,7 +72,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
         }
       });
 
-      // 3. Comprobar sesión actual por si ya fue resuelta antes de montar el listener
+      // 3. Comprobar sesión actual en Supabase Auth
       supabase.auth.getSession().then(({ data, error: sessionErr }) => {
         if (!sessionErr && data?.session?.user && hasRecoveryEvidence) {
           finishValidation(true);
@@ -94,7 +94,7 @@ const StudentAuth = ({ onNavigate, onLoginSuccess, onRecoveryComplete, initialVi
     } else {
       setCheckingRecoverySession(false);
     }
-  }, [view]);
+  }, [view, isRecoveryMode]);
 
   const handleResendEmail = async () => {
     if (resendLoading) return;

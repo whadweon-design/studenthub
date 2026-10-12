@@ -23,6 +23,7 @@ function App() {
   const [settings, setSettings] = useState(null);
   const [courses, setCourses] = useState([]);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const isRecoveryRef = React.useRef(false);
   
   // Registration checkout states
@@ -45,15 +46,19 @@ function App() {
 
     let isMounted = true;
 
-    // Detectar si la URL contiene parámetros o indicadores de recuperación de contraseña
+    // Detectar si la URL contiene parámetros o indicadores de recuperación de contraseña de Supabase
     const currentHash = window.location.hash || '';
     const currentSearch = window.location.search || '';
-    const hasRecoveryIndicator = currentHash.includes('type=recovery') || 
-                                 currentHash.includes('reset-password') || 
-                                 currentSearch.includes('type=recovery');
+    const hasRecoveryCallback = currentHash.includes('type=recovery') ||
+                                currentSearch.includes('type=recovery') ||
+                                (currentHash.includes('access_token=') && currentHash.includes('recovery'));
+    const isManualResetRoute = currentHash.includes('reset-password');
 
-    if (hasRecoveryIndicator) {
+    if (hasRecoveryCallback) {
       isRecoveryRef.current = true;
+      setIsRecoveryMode(true);
+      setCurrentPage('reset-password');
+    } else if (isManualResetRoute) {
       setCurrentPage('reset-password');
     }
 
@@ -62,6 +67,7 @@ function App() {
 
       if (event === 'PASSWORD_RECOVERY') {
         isRecoveryRef.current = true;
+        setIsRecoveryMode(true);
         setCurrentPage('reset-password');
         setAuthLoading(false);
       } else if (event === 'SIGNED_OUT' || !session?.user) {
@@ -487,14 +493,17 @@ function App() {
         {(currentPage === 'login' || currentPage === 'reset-password') && (
           <StudentAuth 
             initialView={currentPage === 'reset-password' ? 'reset-password' : 'login'}
+            isRecoveryMode={isRecoveryMode}
             onNavigate={(page) => {
-              if (page === 'login' || page === 'landing') {
+              if (page !== 'reset-password') {
                 isRecoveryRef.current = false;
+                setIsRecoveryMode(false);
               }
               setCurrentPage(page);
             }}
             onRecoveryComplete={() => {
               isRecoveryRef.current = false;
+              setIsRecoveryMode(false);
               setCurrentPage('login');
             }}
             onLoginSuccess={handleLoginSuccess}
