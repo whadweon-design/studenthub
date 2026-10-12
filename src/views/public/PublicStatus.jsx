@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import GlassCard from '../../components/GlassCard';
-import { RefreshCw, CheckCircle, Clock, AlertTriangle, ArrowRight, ShieldAlert } from 'lucide-react';
+import { RefreshCw, CheckCircle, Clock, AlertTriangle, ArrowRight, ShieldAlert, MessageCircle } from 'lucide-react';
 
 const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
   const [enrollment, setEnrollment] = useState(null);
@@ -106,6 +106,11 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
 
   const status = enrollment?.status || 'REGISTRO_INICIADO';
   const isApproved = status === 'APROBADA';
+  const isRejected = status === 'RECHAZADA';
+
+  const rejectionWhatsAppMsg = encodeURIComponent(
+    'Hola, equipo de Student Hub. Mi inscripción a LEVEL UP aparece como rechazada y me gustaría recibir ayuda para revisar mi solicitud.'
+  );
 
   const renderStatusBadge = () => {
     switch (status) {
@@ -148,17 +153,21 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
       
       {/* Background Auras */}
       <div className="background-auras">
-        <div className="aura aura-blue" />
-        <div className="aura aura-green" />
+        <div className={`aura ${isRejected ? 'aura-coral' : 'aura-blue'}`} />
+        <div className={`aura ${isRejected ? 'aura-coral' : 'aura-green'}`} />
       </div>
 
-      <GlassCard tint={isApproved ? 'mint' : 'blue'} style={{ padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      <GlassCard tint={isApproved ? 'mint' : isRejected ? 'coral' : 'blue'} style={{ padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '28px' }}>
         
         {/* State Icon */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           {isApproved ? (
             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(222, 247, 236, 0.8)', border: '2px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#31c48d', boxShadow: '0 8px 25px rgba(49, 196, 141, 0.2)' }}>
               <CheckCircle size={40} />
+            </div>
+          ) : isRejected ? (
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(253, 232, 232, 0.8)', border: '2px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e02424', boxShadow: '0 8px 25px rgba(224, 36, 36, 0.2)' }}>
+              <AlertTriangle size={40} />
             </div>
           ) : (
             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(225, 239, 254, 0.8)', border: '2px solid rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3f83f8', boxShadow: '0 8px 25px rgba(63, 131, 248, 0.2)' }}>
@@ -169,11 +178,17 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
 
         <div>
           <h1 style={{ fontSize: '28px', marginBottom: '12px', letterSpacing: '-0.5px' }}>
-            {isApproved ? '¡Tu registro ha sido aprobado!' : '¡Registro recibido con éxito!'}
+            {isApproved
+              ? '¡Tu registro ha sido aprobado!'
+              : isRejected
+              ? 'Tu inscripción no fue aprobada'
+              : '¡Registro recibido con éxito!'}
           </h1>
           <p style={{ color: '#4b5563', fontSize: '15px', lineHeight: 1.6 }}>
-            {isApproved 
+            {isApproved
               ? 'Ya tienes acceso completo al Aula Virtual. Utiliza tu correo electrónico y la contraseña que creaste durante tu inscripción para iniciar sesión.'
+              : isRejected
+              ? 'Tu solicitud de inscripción a LEVEL UP no fue aprobada por administración.'
               : 'Estamos verificando tu declaración de pago. En cuanto sea validada por administración (ESTADO: APROBADA), podrás acceder al Aula Virtual.'
             }
           </p>
@@ -211,6 +226,73 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
             <div style={{ fontWeight: 700, marginBottom: '4px' }}>Credenciales de acceso al Aula Virtual:</div>
             <div><strong>Usuario (Correo):</strong> {enrollment?.email}</div>
             <div><strong>Contraseña:</strong> La que creaste durante tu proceso de inscripción</div>
+          </div>
+        )}
+
+        {/* Rejected help message and WhatsApp contact cards */}
+        {isRejected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
+            <div style={{ background: 'rgba(253, 232, 232, 0.5)', borderRadius: '16px', border: '1px solid rgba(249, 128, 128, 0.3)', padding: '16px', fontSize: '14px', color: '#9b1c1c' }}>
+              <p style={{ margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
+                Si consideras que se trata de un error o necesitas ayuda, comunícate con el equipo de Student Hub.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <a
+                href={`https://wa.me/525641439566?text=${rejectionWhatsAppMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(37, 211, 102, 0.35)',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.08)',
+                  textDecoration: 'none',
+                  color: '#1f2937'
+                }}
+              >
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a', flexShrink: 0 }}>
+                  <MessageCircle size={22} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Atención Student Hub</span>
+                  <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>56 4143 9566</span>
+                </div>
+              </a>
+
+              <a
+                href={`https://wa.me/529612493423?text=${rejectionWhatsAppMsg}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(37, 211, 102, 0.35)',
+                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.08)',
+                  textDecoration: 'none',
+                  color: '#1f2937'
+                }}
+              >
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(37, 211, 102, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a', flexShrink: 0 }}>
+                  <MessageCircle size={22} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Equipo de soporte</span>
+                  <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600 }}>961 249 3423</span>
+                </div>
+              </a>
+            </div>
           </div>
         )}
 
