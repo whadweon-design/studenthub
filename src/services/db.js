@@ -1,6 +1,8 @@
 // Local Storage Database Engine
 // Simulates a full backend database with persistence in the browser.
 
+import { OFFICIAL_PAYMENT_CONFIG } from '../config/paymentConfig';
+
 const STORAGE_KEYS = {
   SETTINGS: 'aula_settings_v5',
   ENROLLMENTS: 'aula_enrollments',
@@ -30,15 +32,15 @@ export const clearActiveCheckout = () => {
 
 // Initial Default Configurations
 const DEFAULT_SETTINGS = {
-  courseName: 'LEVEL UP',
+  courseName: OFFICIAL_PAYMENT_CONFIG.courseName,
   courseDescription: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.',
-  price: 499,
-  bankName: 'BBVA (Bancomer)',
-  bankBeneficiary: 'Carlos Eduardo Ramirez Salas',
-  bankClabe: '012 180 01546317540 4',
-  bankAccount: '154 631 7540',
-  bankConcept: 'Nombre Completo del Alumno',
-  whatsappNumber: '5641439566', // Real WhatsApp administrativo
+  price: OFFICIAL_PAYMENT_CONFIG.officialPrice,
+  bankName: OFFICIAL_PAYMENT_CONFIG.bankName,
+  bankBeneficiary: OFFICIAL_PAYMENT_CONFIG.bankBeneficiary,
+  bankClabe: OFFICIAL_PAYMENT_CONFIG.bankClabe,
+  bankAccount: OFFICIAL_PAYMENT_CONFIG.bankAccount,
+  bankConcept: OFFICIAL_PAYMENT_CONFIG.bankConcept,
+  whatsappNumber: OFFICIAL_PAYMENT_CONFIG.whatsappDisplay,
   sessions: [
     { id: '1', name: 'Sesión 01', title: 'IA desde Cero: Entiende lo que Hay Detrás', description: 'Qué es la IA, cómo funciona y qué puede hacer realmente.', day: 'Lunes', date: '', time: '7:00 PM', status: 'Próxima', liveUrl: '', youtubeUrl: '', meetLink: '', presentationUrl: '#', activities: [{ title: 'Actividad 1: Exploración e Introducción', desc: 'Configura tus primeras consultas de Inteligencia Artificial.', file: 'actividad_01.pdf', status: 'No iniciada' }], resources: [{ name: 'Guía de Prompting Básico', type: 'PDF' }, { name: 'Enlace a ChatGPT', type: 'Web' }] },
     { id: '2', name: 'Sesión 02', title: 'Habla con la IA: El Poder de los Prompts', description: 'Ingeniería de prompts aplicada al estudio y trabajo.', day: 'Miércoles', date: '', time: '7:00 PM', status: 'Próxima', liveUrl: '', youtubeUrl: '', meetLink: '', presentationUrl: '#', activities: [{ title: 'Actividad 2: Estructuración de Prompts Avanzados', desc: 'Aplica plantillas de investigación y resumen.', file: 'actividad_02.pdf', status: 'No iniciada' }], resources: [{ name: 'Plantilla de Prompts', type: 'DOCX' }] },

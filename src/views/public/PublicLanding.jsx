@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
+import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
 import logoImg from '../../assets/logo-nobg.png';
@@ -8,10 +10,29 @@ import './PublicLanding.css';
 
 const PublicLanding = ({ onNavigate, onEnterLogin }) => {
   const [settings, setSettings] = useState(null);
+  const [coursePrice, setCoursePrice] = useState(OFFICIAL_PAYMENT_CONFIG.officialPrice);
   const [activeModal, setActiveModal] = useState(null);
 
   useEffect(() => {
     setSettings(getSettings());
+
+    let isMounted = true;
+    supabase
+      .from('courses')
+      .select('price')
+      .eq('slug', OFFICIAL_PAYMENT_CONFIG.courseSlug)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!isMounted || error || !data) return;
+        const verifiedPrice = Number(data.price);
+        if (!isNaN(verifiedPrice) && verifiedPrice > 0) {
+          setCoursePrice(verifiedPrice);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (!settings) {
@@ -133,7 +154,7 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
           <div style={{ textAlign: 'center' }}>
             <div className="public-landing-card-price-title">Inversión Única</div>
             <div className="public-landing-card-price-value">
-              ${settings.price} <span style={{ fontSize: '18px', fontWeight: 600, color: '#4b5563' }}>MXN</span>
+              ${coursePrice} <span style={{ fontSize: '18px', fontWeight: 600, color: '#4b5563' }}>MXN</span>
             </div>
           </div>
 
@@ -258,7 +279,7 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
           className="glass-btn primary"
           style={{ padding: '16px 40px', fontSize: '16px', display: 'inline-flex', alignItems: 'center', gap: '10px' }}
         >
-          <span>Asegurar mi lugar por ${settings.price} MXN</span>
+          <span>Asegurar mi lugar por ${coursePrice} MXN</span>
           <ArrowRight size={18} />
         </button>
       </GlassCard>

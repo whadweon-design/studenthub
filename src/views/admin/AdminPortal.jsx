@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   getSettings, saveSettings, getUsers, getAdminUser, updateAdminUser
 } from '../../services/db';
+import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
 import { supabase } from '../../services/supabaseClient';
 import GlassCard from '../../components/GlassCard';
 import {
@@ -157,13 +158,13 @@ const AdminPortal = ({ onBack }) => {
     const s = getSettings();
     if (s) {
       setSettings(s);
-      setPrice(s.price);
-      setBankName(s.bankName);
-      setBankBeneficiary(s.bankBeneficiary);
-      setBankClabe(s.bankClabe);
-      setBankAccount(s.bankAccount);
-      setBankConcept(s.bankConcept);
-      setWhatsappNumber(s.whatsappNumber);
+      setPrice(OFFICIAL_PAYMENT_CONFIG.officialPrice);
+      setBankName(OFFICIAL_PAYMENT_CONFIG.bankName);
+      setBankBeneficiary(OFFICIAL_PAYMENT_CONFIG.bankBeneficiary);
+      setBankClabe(OFFICIAL_PAYMENT_CONFIG.bankClabe);
+      setBankAccount(OFFICIAL_PAYMENT_CONFIG.bankAccount);
+      setBankConcept(OFFICIAL_PAYMENT_CONFIG.bankConcept);
+      setWhatsappNumber(OFFICIAL_PAYMENT_CONFIG.whatsappDisplay);
       setCourseName(s.courseName);
       setCourseDescription(s.courseDescription);
       setSessions(s.sessions);
@@ -870,8 +871,21 @@ const AdminPortal = ({ onBack }) => {
             </form>
           </GlassCard>
 
-          {/* Payment & Settings Form */}
-          <form onSubmit={handleSaveSettings} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px', alignItems: 'start' }}>
+          {/* Notice about Centralized Payment Configuration */}
+          <GlassCard tint="blue" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', color: '#1e429f' }}>
+              <Info size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <strong style={{ display: 'block', marginBottom: '4px', fontSize: '15px' }}>
+                  Datos oficiales de pago centralizados (Solo lectura)
+                </strong>
+                Los datos oficiales de pago y contacto se gestionan mediante la configuración centralizada de la aplicación y la tabla <code>public.courses</code> de Supabase para garantizar que todos los alumnos visualicen exactamente la misma información en cualquier dispositivo. La edición local desde este panel se encuentra deshabilitada temporalmente.
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Payment & Settings Read-Only View */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', alignItems: 'start' }}>
 
             <GlassCard tint="neutral" style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '10px' }}>Datos de Transferencia Bancaria</h3>
@@ -882,8 +896,10 @@ const AdminPortal = ({ onBack }) => {
                   <input
                     type="text"
                     value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
+                    disabled
+                    readOnly
                     className="glass-input"
+                    style={{ opacity: 0.75, cursor: 'not-allowed' }}
                   />
                 </div>
                 <div>
@@ -891,8 +907,10 @@ const AdminPortal = ({ onBack }) => {
                   <input
                     type="text"
                     value={bankBeneficiary}
-                    onChange={(e) => setBankBeneficiary(e.target.value)}
+                    disabled
+                    readOnly
                     className="glass-input"
+                    style={{ opacity: 0.75, cursor: 'not-allowed' }}
                   />
                 </div>
               </div>
@@ -902,8 +920,10 @@ const AdminPortal = ({ onBack }) => {
                 <input
                   type="text"
                   value={bankClabe}
-                  onChange={(e) => setBankClabe(e.target.value)}
+                  disabled
+                  readOnly
                   className="glass-input"
+                  style={{ opacity: 0.75, cursor: 'not-allowed' }}
                 />
               </div>
 
@@ -913,8 +933,10 @@ const AdminPortal = ({ onBack }) => {
                   <input
                     type="text"
                     value={bankAccount}
-                    onChange={(e) => setBankAccount(e.target.value)}
+                    disabled
+                    readOnly
                     className="glass-input"
+                    style={{ opacity: 0.75, cursor: 'not-allowed' }}
                   />
                 </div>
                 <div>
@@ -922,8 +944,10 @@ const AdminPortal = ({ onBack }) => {
                   <input
                     type="text"
                     value={bankConcept}
-                    onChange={(e) => setBankConcept(e.target.value)}
+                    disabled
+                    readOnly
                     className="glass-input"
+                    style={{ opacity: 0.75, cursor: 'not-allowed' }}
                   />
                 </div>
               </div>
@@ -940,31 +964,39 @@ const AdminPortal = ({ onBack }) => {
                     <input
                       type="number"
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      disabled
+                      readOnly
                       className="glass-input"
-                      style={{ paddingLeft: '40px' }}
+                      style={{ paddingLeft: '40px', opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#374151' }}>WhatsApp Administrativo (Lada + Número)</label>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: '#374151' }}>WhatsApp Administrativo</label>
                   <input
                     type="text"
                     value={whatsappNumber}
-                    onChange={(e) => setWhatsappNumber(e.target.value)}
-                    placeholder="+52 55 1234 5678"
+                    disabled
+                    readOnly
                     className="glass-input"
+                    style={{ opacity: 0.75, cursor: 'not-allowed' }}
                   />
                 </div>
               </GlassCard>
 
-              <button type="submit" className="glass-btn primary" style={{ width: '100%', padding: '14px' }}>
-                Guardar Configuración General
+              <button
+                type="button"
+                disabled
+                className="glass-btn secondary"
+                style={{ width: '100%', padding: '14px', opacity: 0.65, cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <Lock size={15} />
+                <span>Edición deshabilitada (Configuración centralizada)</span>
               </button>
             </div>
 
-          </form>
+          </div>
 
         </div>
       )}

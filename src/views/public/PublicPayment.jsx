@@ -1,19 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabaseClient';
-import { getSettings } from '../../services/db';
+import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
 import GlassCard from '../../components/GlassCard';
 import { ArrowLeft, Check, Clipboard, Send, Upload, Smartphone, ShieldAlert } from 'lucide-react';
 
 const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }) => {
-  const [settings, setSettings] = useState(null);
+  const [courseInfo, setCourseInfo] = useState(null);
+  const [loadingCourse, setLoadingCourse] = useState(true);
+  const [courseError, setCourseError] = useState('');
   const [copiedField, setCopiedField] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [declaredTransfer, setDeclaredTransfer] = useState(false);
 
-  useEffect(() => {
-    setSettings(getSettings());
+  const fetchOfficialCoursePrice = useCallback(async () => {
+    setLoadingCourse(true);
+    setCourseError('');
+
+    try {
+      const { data: courseData, error: queryError } = await supabase
+        .from('courses')
+        .select('id, price')
+        .eq('slug', OFFICIAL_PAYMENT_CONFIG.courseSlug)
+        .maybeSingle();
+
+      if (queryError || !courseData) {
+        throw new Error('No se pudo verificar el precio oficial del curso LEVEL UP en Supabase.');
+      }
+
+      const verifiedPrice = Number(courseData.price);
+      if (isNaN(verifiedPrice) || verifiedPrice <= 0) {
+        throw new Error('El importe del curso devuelto por la base de datos no es válido.');
+      }
+
+      setCourseInfo({
+        id: courseData.id,
+        price: verifiedPrice
+      });
+    } catch (err) {
+      console.error('Error al verificar el precio oficial del curso:', err);
+      setCourseInfo(null);
+      setCourseError(err.message || 'No fue posible verificar la información oficial de pago. Intenta nuevamente.');
+    } finally {
+      setLoadingCourse(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOfficialCoursePrice();
+  }, [fetchOfficialCoursePrice]);
 
   const copyToClipboard = (text, fieldName) => {
     navigator.clipboard.writeText(text);
@@ -22,15 +57,15 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
   };
 
   const getWhatsAppLink = () => {
-    if (!settings) return '#';
-    const cleanNumber = settings.whatsappNumber ? settings.whatsappNumber.replace(/[+\s-]/g, '') : '5641439566';
-    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${settings.price || 499} MXN\n\nAdjunto mi comprobante de pago.`;
-    return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    if (!courseInfo) return '#';
+    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${courseInfo.price} MXN\n\nAdjunto mi comprobante de pago.`;
+    return `https://wa.me/${OFFICIAL_PAYMENT_CONFIG.whatsappWaMe}?text=${encodeURIComponent(message)}`;
   };
 
   const handleWhatsAppClick = () => {
+    if (!courseInfo) return;
     // Abrir WhatsApp en una nueva pestaña. NO altera la base de datos ni el estado de inscripción.
-    window.open(getWhatsAppLink(), '_blank');
+    window.open(getWhatsAppLink(), '_blank', 'noopener,noreferrer');
   };
 
   const handleConfirmWhatsAppSent = async () => {
@@ -53,13 +88,13 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
       const sbUser = authData.user;
 
       // 2. Obtener el UUID real del curso LEVEL UP
-      const { data: courseData, error: courseError } = await supabase
+      const { data: courseData, error: courseErrorResp } = await supabase
         .from('courses')
         .select('id')
-        .eq('slug', 'level-up')
+        .eq('slug', OFFICIAL_PAYMENT_CONFIG.courseSlug)
         .maybeSingle();
 
-      if (courseError || !courseData) {
+      if (courseErrorResp || !courseData) {
         throw new Error('No se pudo obtener la información del curso LEVEL UP desde Supabase.');
       }
 
@@ -101,7 +136,47 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
     }
   };
 
-  if (!settings) return null;
+  if (loadingCourse) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <div className="glass-panel blue" style={{ padding: '40px', fontSize: '16px', fontWeight: 600, textAlign: 'center' }}>
+          Verificando datos oficiales de pago...
+        </div>
+      </div>
+    );
+  }
+
+  if (courseError || !courseInfo) {
+    return (
+      <div style={{ width: '100%', maxWidth: '600px', margin: '60px auto', padding: '20px' }}>
+        <GlassCard tint="coral" style={{ padding: '36px', textAlign: 'center' }}>
+          <ShieldAlert size={48} style={{ color: '#b91c1c', margin: '0 auto 16px auto' }} />
+          <h2 style={{ fontSize: '22px', marginBottom: '12px' }}>No se pudo verificar el importe oficial</h2>
+          <p style={{ color: '#4b5563', fontSize: '14px', marginBottom: '24px', lineHeight: 1.5 }}>
+            {courseError || 'Por seguridad, no se muestran instrucciones de transferencia hasta confirmar el importe oficial en la base de datos.'}
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={fetchOfficialCoursePrice}
+              className="glass-btn primary"
+              style={{ padding: '12px 24px' }}
+            >
+              Reintentar consulta
+            </button>
+            <button
+              onClick={() => onNavigate('landing')}
+              className="glass-btn secondary"
+              style={{ padding: '12px 24px' }}
+            >
+              Ir a Inicio
+            </button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  const conceptValue = studentData?.name || currentUser?.name || OFFICIAL_PAYMENT_CONFIG.bankConcept;
 
   return (
     <div className="fade-in" style={{ width: '100%', maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
@@ -114,9 +189,9 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
       </div>
 
       {/* Navigation */}
-      <button 
-        onClick={() => onNavigate('landing')} 
-        className="glass-pill secondary" 
+      <button
+        onClick={() => onNavigate('landing')}
+        className="glass-pill secondary"
         style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '30px' }}
       >
         <ArrowLeft size={16} />
@@ -148,11 +223,11 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>Banco</span>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{settings.bankName || 'Por configurar'}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{OFFICIAL_PAYMENT_CONFIG.bankName}</div>
             </div>
-            <button 
-              onClick={() => copyToClipboard(settings.bankName, 'bank')} 
-              className="glass-pill" 
+            <button
+              onClick={() => copyToClipboard(OFFICIAL_PAYMENT_CONFIG.bankName, 'bank')}
+              className="glass-pill"
               style={{ padding: '6px 12px', fontSize: '12px' }}
             >
               {copiedField === 'bank' ? <Check size={14} /> : <Clipboard size={14} />}
@@ -163,11 +238,11 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>Beneficiario</span>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{settings.bankBeneficiary || 'Por configurar'}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{OFFICIAL_PAYMENT_CONFIG.bankBeneficiary}</div>
             </div>
-            <button 
-              onClick={() => copyToClipboard(settings.bankBeneficiary, 'beneficiary')} 
-              className="glass-pill" 
+            <button
+              onClick={() => copyToClipboard(OFFICIAL_PAYMENT_CONFIG.bankBeneficiary, 'beneficiary')}
+              className="glass-pill"
               style={{ padding: '6px 12px', fontSize: '12px' }}
             >
               {copiedField === 'beneficiary' ? <Check size={14} /> : <Clipboard size={14} />}
@@ -178,11 +253,11 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
             <div>
               <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>CLABE</span>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', letterSpacing: '0.5px' }}>{settings.bankClabe || 'Por configurar'}</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', letterSpacing: '0.5px' }}>{OFFICIAL_PAYMENT_CONFIG.bankClabe}</div>
             </div>
-            <button 
-              onClick={() => copyToClipboard(settings.bankClabe, 'clabe')} 
-              className="glass-pill" 
+            <button
+              onClick={() => copyToClipboard(OFFICIAL_PAYMENT_CONFIG.bankClabe, 'clabe')}
+              className="glass-pill"
               style={{ padding: '6px 12px', fontSize: '12px' }}
             >
               {copiedField === 'clabe' ? <Check size={14} /> : <Clipboard size={14} />}
@@ -190,15 +265,15 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
           </div>
 
           {/* Account */}
-          {settings.bankAccount && (
+          {OFFICIAL_PAYMENT_CONFIG.bankAccount && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>Número de Cuenta</span>
-                <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{settings.bankAccount}</div>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{OFFICIAL_PAYMENT_CONFIG.bankAccount}</div>
               </div>
-              <button 
-                onClick={() => copyToClipboard(settings.bankAccount, 'account')} 
-                className="glass-pill" 
+              <button
+                onClick={() => copyToClipboard(OFFICIAL_PAYMENT_CONFIG.bankAccount, 'account')}
+                className="glass-pill"
                 style={{ padding: '6px 12px', fontSize: '12px' }}
               >
                 {copiedField === 'account' ? <Check size={14} /> : <Clipboard size={14} />}
@@ -211,15 +286,15 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
             <div>
               <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>Concepto sugerido</span>
               <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>
-                {studentData?.name || currentUser?.name || (settings.bankConcept || 'Nombre Completo del Alumno')}
+                {conceptValue}
               </div>
               <span style={{ fontSize: '12px', color: '#4b5563', fontStyle: 'italic', marginTop: '2px', display: 'block' }}>
                 (Utiliza tu <strong>Nombre Completo</strong> como concepto al hacer la transferencia)
               </span>
             </div>
-            <button 
-              onClick={() => copyToClipboard(studentData?.name || currentUser?.name || settings.bankConcept || 'Nombre Completo del Alumno', 'concept')} 
-              className="glass-pill" 
+            <button
+              onClick={() => copyToClipboard(conceptValue, 'concept')}
+              className="glass-pill"
               style={{ padding: '6px 12px', fontSize: '12px' }}
             >
               {copiedField === 'concept' ? <Check size={14} /> : <Clipboard size={14} />}
@@ -227,26 +302,24 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
           </div>
 
           {/* WhatsApp Administrativo */}
-          {settings.whatsappNumber && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>WhatsApp Administrativo</span>
-                <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{settings.whatsappNumber}</div>
-              </div>
-              <button 
-                onClick={() => copyToClipboard(settings.whatsappNumber, 'whatsapp')} 
-                className="glass-pill" 
-                style={{ padding: '6px 12px', fontSize: '12px' }}
-              >
-                {copiedField === 'whatsapp' ? <Check size={14} /> : <Clipboard size={14} />}
-              </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <span style={{ fontSize: '13px', color: '#4b5563', fontWeight: 500 }}>WhatsApp Administrativo</span>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{OFFICIAL_PAYMENT_CONFIG.whatsappDisplay}</div>
             </div>
-          )}
+            <button
+              onClick={() => copyToClipboard(OFFICIAL_PAYMENT_CONFIG.whatsappDisplay, 'whatsapp')}
+              className="glass-pill"
+              style={{ padding: '6px 12px', fontSize: '12px' }}
+            >
+              {copiedField === 'whatsapp' ? <Check size={14} /> : <Clipboard size={14} />}
+            </button>
+          </div>
 
           {/* Price */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '15px', background: 'rgba(255,255,255,0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>
             <span style={{ fontWeight: 600, color: '#374151' }}>Monto exacto a transferir:</span>
-            <span style={{ fontSize: '20px', fontWeight: 800, color: '#1e429f' }}>${settings.price} MXN</span>
+            <span style={{ fontSize: '20px', fontWeight: 800, color: '#1e429f' }}>${courseInfo.price} MXN</span>
           </div>
 
         </div>
@@ -255,7 +328,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
       {/* Confirmation Options Container */}
       <h3 style={{ fontSize: '18px', marginBottom: '18px', textAlign: 'center' }}>Confirmación de Pago</h3>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
         
         {/* Option A: WhatsApp */}
         <GlassCard tint="mint" style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between' }}>
@@ -265,24 +338,24 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
               <span>Opción A: Notificación por WhatsApp</span>
             </div>
             <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
-              Envía tu comprobante de transferencia al WhatsApp administrativo (<strong>{settings.whatsappNumber || '5641439566'}</strong>).
+              Envía tu comprobante de transferencia al WhatsApp administrativo (<strong>{OFFICIAL_PAYMENT_CONFIG.whatsappDisplay}</strong>).
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button 
+            <button
               type="button"
               onClick={handleWhatsAppClick}
-              className="glass-pill mint" 
+              className="glass-pill mint"
               style={{ width: '100%', padding: '12px', justifyContent: 'center', gap: '8px', border: '1px solid rgba(255,255,255,0.8)' }}
             >
               <Send size={15} />
-              <span>1. Abrir WhatsApp ({settings.whatsappNumber || '5641439566'})</span>
+              <span>1. Abrir WhatsApp ({OFFICIAL_PAYMENT_CONFIG.whatsappDisplay})</span>
             </button>
 
             {/* Declaración explícita obligatoria */}
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '12px', color: '#1f2937', cursor: 'pointer', background: 'rgba(255,255,255,0.5)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.7)' }}>
-              <input 
+              <input
                 type="checkbox"
                 checked={declaredTransfer}
                 onChange={(e) => setDeclaredTransfer(e.target.checked)}
@@ -291,7 +364,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
               <span>Declaro que realicé la transferencia bancaria y envié mi comprobante por WhatsApp.</span>
             </label>
 
-            <button 
+            <button
               type="button"
               onClick={handleConfirmWhatsAppSent}
               disabled={submitting || !declaredTransfer}

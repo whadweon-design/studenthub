@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
+import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
 import { ArrowLeft, ArrowRight, Shield, User, Mail, Phone, Lock, Eye, EyeOff, Key, CheckSquare, Square, ShieldCheck, ShieldAlert } from 'lucide-react';
@@ -20,6 +21,7 @@ const COUNTRY_CODES = [
 
 const PublicRegister = ({ onNavigate, initialData = {} }) => {
   const [settings, setSettings] = useState(null);
+  const [coursePrice, setCoursePrice] = useState(OFFICIAL_PAYMENT_CONFIG.officialPrice);
   const [formData, setFormData] = useState({
     name: initialData.name || '',
     email: initialData.email || '',
@@ -41,6 +43,24 @@ const PublicRegister = ({ onNavigate, initialData = {} }) => {
 
   useEffect(() => {
     setSettings(getSettings());
+
+    let isMounted = true;
+    supabase
+      .from('courses')
+      .select('price')
+      .eq('slug', OFFICIAL_PAYMENT_CONFIG.courseSlug)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!isMounted || error || !data) return;
+        const verifiedPrice = Number(data.price);
+        if (!isNaN(verifiedPrice) && verifiedPrice > 0) {
+          setCoursePrice(verifiedPrice);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleChange = (e) => {
@@ -482,7 +502,7 @@ const PublicRegister = ({ onNavigate, initialData = {} }) => {
               <div>
                 <div className="public-register-summary-label">Curso</div>
                 <div className="public-register-summary-course">
-                  {settings.courseName}
+                  {OFFICIAL_PAYMENT_CONFIG.courseName}
                 </div>
               </div>
 
@@ -502,7 +522,7 @@ const PublicRegister = ({ onNavigate, initialData = {} }) => {
               <div className="public-register-summary-total-row">
                 <span className="public-register-summary-total-label">Total a pagar:</span>
                 <span className="public-register-summary-price">
-                  ${settings.price} MXN
+                  ${coursePrice} MXN
                 </span>
               </div>
               
