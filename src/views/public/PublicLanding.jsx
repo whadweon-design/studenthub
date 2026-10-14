@@ -79,13 +79,13 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
             INICIO OFICIAL: LUNES 26 DE OCTUBRE DE 2026
           </span>
           <h1 className="public-landing-hero-title">
-            LEVEL UP
+            {OFFICIAL_COURSE_SCHEDULE.courseName}
           </h1>
           <h2 className="public-landing-hero-subtitle">
             Potencia tu forma de estudiar, crear y trabajar con IA.
           </h2>
           <p className="public-landing-hero-desc">
-            Un curso práctico para estudiantes que quieren descubrir cómo utilizar la Inteligencia Artificial para aprender mejor, desarrollar ideas, crear contenido y prepararse para el mundo profesional.
+            {OFFICIAL_COURSE_SCHEDULE.courseDescription}
           </p>
 
           <div className="public-landing-cta-group">

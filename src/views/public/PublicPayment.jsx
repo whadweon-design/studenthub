@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
 import GlassCard from '../../components/GlassCard';
 import { ArrowLeft, Check, Clipboard, Send, Upload, Smartphone, ShieldAlert } from 'lucide-react';
 
@@ -25,7 +26,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
         .maybeSingle();
 
       if (queryError || !courseData) {
-        throw new Error('No se pudo verificar el precio oficial del curso LEVEL UP en Supabase.');
+        throw new Error(`No se pudo verificar el precio oficial del curso ${OFFICIAL_COURSE_SCHEDULE.courseName} en Supabase.`);
       }
 
       const verifiedPrice = Number(courseData.price);
@@ -58,7 +59,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
 
   const getWhatsAppLink = () => {
     if (!courseInfo) return '#';
-    const message = `Hola, realicé mi inscripción al curso LEVEL UP.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${courseInfo.price} MXN\n\nAdjunto mi comprobante de pago.`;
+    const message = `Hola, realicé mi inscripción al curso ${OFFICIAL_COURSE_SCHEDULE.courseName}.\n\nNombre: ${studentData?.name || currentUser?.name || ''}\nCorreo: ${studentData?.email || currentUser?.email || ''}\nTeléfono: ${studentData?.phone || currentUser?.phone || ''}\nImporte: $${courseInfo.price} MXN\n\nAdjunto mi comprobante de pago.`;
     return `https://wa.me/${OFFICIAL_PAYMENT_CONFIG.whatsappWaMe}?text=${encodeURIComponent(message)}`;
   };
 
@@ -87,7 +88,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
       }
       const sbUser = authData.user;
 
-      // 2. Obtener el UUID real del curso LEVEL UP
+      // 2. Obtener el UUID real del curso mediante su identificador técnico
       const { data: courseData, error: courseErrorResp } = await supabase
         .from('courses')
         .select('id')
@@ -95,7 +96,7 @@ const PublicPayment = ({ onNavigate, studentData, currentUser, onPaymentSubmit }
         .maybeSingle();
 
       if (courseErrorResp || !courseData) {
-        throw new Error('No se pudo obtener la información del curso LEVEL UP desde Supabase.');
+        throw new Error(`No se pudo obtener la información del curso ${OFFICIAL_COURSE_SCHEDULE.courseName} desde Supabase.`);
       }
 
       // 3. Ejecutar el UPDATE estricto en public.enrollments

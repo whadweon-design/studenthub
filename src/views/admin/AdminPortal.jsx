@@ -67,6 +67,7 @@ const AdminPortal = ({ onBack }) => {
           ),
           courses!course_id (
             id,
+            slug,
             title,
             price
           )
@@ -94,43 +95,56 @@ const AdminPortal = ({ onBack }) => {
             ? supabase.from('profiles').select('id, full_name, phone').in('id', userIds)
             : { data: [] },
           courseIds.length > 0
-            ? supabase.from('courses').select('id, title, price').in('id', courseIds)
+            ? supabase.from('courses').select('id, slug, title, price').in('id', courseIds)
             : { data: [] }
         ]);
 
         const profileMap = new Map((profilesRes.data || []).map(p => [p.id, p]));
         const courseMap = new Map((coursesRes.data || []).map(c => [c.id, c]));
 
-        const combined = (rawEnrollments || []).map(e => ({
-          id: e.id,
-          status: e.status,
-          paymentMethod: e.payment_method || 'No especificado',
-          receiptUrl: e.receipt_url,
-          submittedAt: e.submitted_at,
-          processedAt: e.processed_at,
-          studentName: profileMap.get(e.user_id)?.full_name || 'Alumno sin nombre registrado',
-          studentPhone: profileMap.get(e.user_id)?.phone || null,
-          courseName: courseMap.get(e.course_id)?.title || 'Curso no disponible',
-          price: courseMap.get(e.course_id)?.price || 0
-        }));
+        const combined = (rawEnrollments || []).map(e => {
+          const courseObj = courseMap.get(e.course_id);
+          const resolvedCourseName = courseObj?.slug === 'level-up'
+            ? OFFICIAL_COURSE_SCHEDULE.courseName
+            : (courseObj?.title || 'Curso no disponible');
+
+          return {
+            id: e.id,
+            status: e.status,
+            paymentMethod: e.payment_method || 'No especificado',
+            receiptUrl: e.receipt_url,
+            submittedAt: e.submitted_at,
+            processedAt: e.processed_at,
+            studentName: profileMap.get(e.user_id)?.full_name || 'Alumno sin nombre registrado',
+            studentPhone: profileMap.get(e.user_id)?.phone || null,
+            courseName: resolvedCourseName,
+            price: courseObj?.price || 0
+          };
+        });
 
         setEnrollments(combined);
         return;
       }
 
       // Si la consulta join tuvo éxito directo
-      const mapped = (data || []).map(e => ({
-        id: e.id,
-        status: e.status,
-        paymentMethod: e.payment_method || 'No especificado',
-        receiptUrl: e.receipt_url,
-        submittedAt: e.submitted_at,
-        processedAt: e.processed_at,
-        studentName: e.profiles?.full_name || 'Alumno sin nombre registrado',
-        studentPhone: e.profiles?.phone || null,
-        courseName: e.courses?.title || 'Curso no disponible',
-        price: e.courses?.price || 0
-      }));
+      const mapped = (data || []).map(e => {
+        const resolvedCourseName = e.courses?.slug === 'level-up'
+          ? OFFICIAL_COURSE_SCHEDULE.courseName
+          : (e.courses?.title || 'Curso no disponible');
+
+        return {
+          id: e.id,
+          status: e.status,
+          paymentMethod: e.payment_method || 'No especificado',
+          receiptUrl: e.receipt_url,
+          submittedAt: e.submitted_at,
+          processedAt: e.processed_at,
+          studentName: e.profiles?.full_name || 'Alumno sin nombre registrado',
+          studentPhone: e.profiles?.phone || null,
+          courseName: resolvedCourseName,
+          price: e.courses?.price || 0
+        };
+      });
 
       setEnrollments(mapped);
     } catch (err) {
@@ -166,8 +180,8 @@ const AdminPortal = ({ onBack }) => {
       setBankAccount(OFFICIAL_PAYMENT_CONFIG.bankAccount);
       setBankConcept(OFFICIAL_PAYMENT_CONFIG.bankConcept);
       setWhatsappNumber(OFFICIAL_PAYMENT_CONFIG.whatsappDisplay);
-      setCourseName(s.courseName);
-      setCourseDescription(s.courseDescription);
+      setCourseName(OFFICIAL_COURSE_SCHEDULE.courseName);
+      setCourseDescription(OFFICIAL_COURSE_SCHEDULE.courseDescription);
       setSessions(OFFICIAL_COURSE_SCHEDULE.sessions);
     }
   };
@@ -712,7 +726,7 @@ const AdminPortal = ({ onBack }) => {
                 <strong style={{ display: 'block', marginBottom: '4px', fontSize: '15px' }}>
                   Fechas y horarios oficiales centralizados (Solo lectura)
                 </strong>
-                El calendario oficial de <strong>{OFFICIAL_COURSE_SCHEDULE.courseTitle}</strong> (4 sesiones en vivo de {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel}, {OFFICIAL_COURSE_SCHEDULE.timezoneLabel}) se gestiona desde la configuración centralizada de la aplicación (<code>src/config/courseSchedule.js</code>) y no desde <code>localStorage</code>, garantizando que todos los dispositivos muestren exactamente las mismas fechas y horarios.
+                El calendario oficial de <strong>{OFFICIAL_COURSE_SCHEDULE.courseName}</strong> (4 sesiones en vivo de {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel}, {OFFICIAL_COURSE_SCHEDULE.timezoneLabel}) se gestiona desde la configuración centralizada de la aplicación (<code>src/config/courseSchedule.js</code>) y no desde <code>localStorage</code>, garantizando que todos los dispositivos muestren exactamente las mismas fechas y horarios.
               </div>
             </div>
           </GlassCard>

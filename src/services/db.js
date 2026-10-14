@@ -33,8 +33,8 @@ export const clearActiveCheckout = () => {
 
 // Initial Default Configurations
 const DEFAULT_SETTINGS = {
-  courseName: OFFICIAL_PAYMENT_CONFIG.courseName,
-  courseDescription: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.',
+  courseName: OFFICIAL_COURSE_SCHEDULE.courseName,
+  courseDescription: OFFICIAL_COURSE_SCHEDULE.courseDescription,
   price: OFFICIAL_PAYMENT_CONFIG.officialPrice,
   bankName: OFFICIAL_PAYMENT_CONFIG.bankName,
   bankBeneficiary: OFFICIAL_PAYMENT_CONFIG.bankBeneficiary,
@@ -48,8 +48,8 @@ const DEFAULT_SETTINGS = {
 const DEFAULT_COURSES = [
   {
     id: 'level-up',
-    name: 'LEVEL UP',
-    description: 'Aprende a integrar la inteligencia artificial en tu día a día para trabajar mejor y lograr más de forma práctica.',
+    name: OFFICIAL_COURSE_SCHEDULE.courseName,
+    description: OFFICIAL_COURSE_SCHEDULE.courseDescription,
     progress: 0,
     status: 'En progreso',
     color: 'mint',

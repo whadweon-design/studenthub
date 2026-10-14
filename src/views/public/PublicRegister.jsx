@@ -503,7 +503,7 @@ const PublicRegister = ({ onNavigate, initialData = {} }) => {
               <div>
                 <div className="public-register-summary-label">Curso</div>
                 <div className="public-register-summary-course">
-                  {OFFICIAL_PAYMENT_CONFIG.courseName}
+                  {OFFICIAL_COURSE_SCHEDULE.courseName}
                 </div>
               </div>
 

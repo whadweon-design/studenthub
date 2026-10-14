@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../services/supabaseClient';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
 import GlassCard from '../../components/GlassCard';
 import { RefreshCw, CheckCircle, Clock, AlertTriangle, ArrowRight, ShieldAlert, MessageCircle } from 'lucide-react';
 
@@ -20,7 +21,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
       }
       const sbUser = authData.user;
 
-      // 2. Obtener el UUID y precio real del curso LEVEL UP desde Supabase
+      // 2. Obtener el UUID y precio real del curso desde Supabase mediante su identificador técnico 'level-up'
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .select('id, price')
@@ -28,7 +29,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
         .maybeSingle();
 
       if (courseError || !courseData) {
-        throw new Error('No se pudo obtener la información del curso LEVEL UP.');
+        throw new Error(`No se pudo obtener la información del curso ${OFFICIAL_COURSE_SCHEDULE.courseName}.`);
       }
 
       const coursePrice = Number(courseData.price);
@@ -60,7 +61,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
         submittedAt: realEnrollment.submitted_at,
         name: currentUser?.name || sbUser.email,
         email: sbUser.email,
-        courseName: 'LEVEL UP: IA para Estudiantes',
+        courseName: OFFICIAL_COURSE_SCHEDULE.courseName,
         price: coursePrice
       });
     } catch (err) {
@@ -109,7 +110,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
   const isRejected = status === 'RECHAZADA';
 
   const rejectionWhatsAppMsg = encodeURIComponent(
-    'Hola, equipo de Student Hub. Mi inscripción a LEVEL UP aparece como rechazada y me gustaría recibir ayuda para revisar mi solicitud.'
+    `Hola, equipo de Student Hub. Mi inscripción a ${OFFICIAL_COURSE_SCHEDULE.courseName} aparece como rechazada y me gustaría recibir ayuda para revisar mi solicitud.`
   );
 
   const renderStatusBadge = () => {
@@ -188,7 +189,7 @@ const PublicStatus = ({ enrollmentId, currentUser, onNavigate }) => {
             {isApproved
               ? 'Ya tienes acceso completo al Aula Virtual. Utiliza tu correo electrónico y la contraseña que creaste durante tu inscripción para iniciar sesión.'
               : isRejected
-              ? 'Tu solicitud de inscripción a LEVEL UP no fue aprobada por administración.'
+              ? `Tu solicitud de inscripción a ${OFFICIAL_COURSE_SCHEDULE.courseName} no fue aprobada por administración.`
               : 'Estamos verificando tu declaración de pago. En cuanto sea validada por administración (ESTADO: APROBADA), podrás acceder al Aula Virtual.'
             }
           </p>

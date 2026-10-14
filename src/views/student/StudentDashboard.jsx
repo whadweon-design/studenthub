@@ -126,10 +126,10 @@ const StudentDashboard = ({
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', alignItems: 'center' }}>
               <div>
                 <h2 style={{ fontSize: '28px', lineHeight: 1.2, marginBottom: '10px', letterSpacing: '-0.5px' }}>
-                  {settings.courseName}
+                  {OFFICIAL_COURSE_SCHEDULE.courseName}
                 </h2>
                 <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.5, marginBottom: '28px' }}>
-                  {settings.courseDescription}
+                  {OFFICIAL_COURSE_SCHEDULE.courseDescription}
                 </p>
 
                 <div style={{ marginBottom: '24px' }}>
@@ -145,8 +145,8 @@ const StudentDashboard = ({
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => onSelectCourse(courses[0] || { id: 'level-up', name: settings.courseName })} 
+                <button
+                  onClick={() => onSelectCourse(courses[0] || { id: 'level-up', name: OFFICIAL_COURSE_SCHEDULE.courseName, description: OFFICIAL_COURSE_SCHEDULE.courseDescription })}
                   className="glass-pill mint" 
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
