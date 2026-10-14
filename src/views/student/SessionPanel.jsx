@@ -144,7 +144,7 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px', marginBottom: '24px' }}>
         <div>
           <span className="glass-pill blue" style={{ marginBottom: '8px', pointerEvents: 'none' }}>
-            {session.name} — {session.day}
+            {session.name} — {session.fullDateLabel || `${session.day} ${session.date}`}
           </span>
           <h1 style={{ fontSize: '30px', marginTop: '6px', letterSpacing: '-0.5px' }}>{session.title}</h1>
           <p style={{ color: '#4b5563', fontSize: '14px', marginTop: '4px', maxWidth: '650px' }}>
@@ -153,11 +153,11 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
           <div style={{ display: 'flex', gap: '15px', marginTop: '10px', color: '#4b5563', fontSize: '14px', flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Calendar size={14} />
-              <span>{session.date || 'Fecha por confirmar'}</span>
+              <span>{session.fullDateLabel || `${session.day} ${session.date}`}</span>
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Clock size={14} />
-              <span>{session.time ? `${session.time} (1h 30m)` : 'Hora por confirmar'}</span>
+              <span>{session.time} (1h 30m · {session.timezoneLabel || 'Hora de Ciudad de México'})</span>
             </span>
           </div>
         </div>
@@ -240,7 +240,7 @@ const SessionPanel = ({ session, course, user, onBack, onProgressUpdate }) => {
                     <div>
                       <h3 style={{ fontSize: '20px', fontWeight: 800 }}>🔴 Entrar a clase en vivo</h3>
                       <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '2px' }}>
-                        {session.name} · {session.day} {session.time ? `a las ${session.time}` : ''}
+                        {session.name} · {session.fullDateLabel || `${session.day} ${session.date}`} · {session.time} ({session.timezoneLabel || 'Hora de Ciudad de México'})
                       </div>
                     </div>
                   </div>

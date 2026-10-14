@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
 import { ArrowLeft, ArrowRight, Shield, User, Mail, Phone, Lock, Eye, EyeOff, Key, CheckSquare, Square, ShieldCheck, ShieldAlert } from 'lucide-react';
@@ -508,12 +509,28 @@ const PublicRegister = ({ onNavigate, initialData = {} }) => {
 
               <div className="public-register-summary-grid">
                 <div>
+                  <div className="public-register-summary-label">Inicio</div>
+                  <div className="public-register-summary-val">{OFFICIAL_COURSE_SCHEDULE.officialStartDateShort}</div>
+                </div>
+                <div>
+                  <div className="public-register-summary-label">Horario</div>
+                  <div className="public-register-summary-val">
+                    {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel}
+                    <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>
+                      {OFFICIAL_COURSE_SCHEDULE.timezoneLabel}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="public-register-summary-grid">
+                <div>
                   <div className="public-register-summary-label">Modalidad</div>
-                  <div className="public-register-summary-val">Online / En vivo</div>
+                  <div className="public-register-summary-val">{OFFICIAL_COURSE_SCHEDULE.modalityLabel}</div>
                 </div>
                 <div>
                   <div className="public-register-summary-label">Duración</div>
-                  <div className="public-register-summary-val">4 sesiones · 6h</div>
+                  <div className="public-register-summary-val">{OFFICIAL_COURSE_SCHEDULE.totalDurationLabel}</div>
                 </div>
               </div>
 

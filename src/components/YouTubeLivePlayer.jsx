@@ -114,7 +114,7 @@ const YouTubeLivePlayer = ({ session, user, onClose }) => {
             🔴 Clase en vivo próximamente
           </h3>
           <p style={{ color: '#9ca3af', fontSize: '14px', maxWidth: '520px', lineHeight: 1.6, margin: 0 }}>
-            La transmisión en vivo de la <strong>{session.name}</strong> estará disponible en este espacio a la hora programada {session.day ? `(${session.day}${session.time ? ` a las ${session.time}` : ''})` : ''}.
+            La transmisión en vivo de la <strong>{session.name}</strong> estará disponible en este espacio en la fecha y horario programados ({session.fullDateLabel || `${session.day} ${session.date || ''}`.trim()}, de {session.time}, {session.timezoneLabel || 'Hora de Ciudad de México'}).
           </p>
           <div style={{ fontSize: '12px', color: '#60a5fa', background: 'rgba(59, 130, 246, 0.15)', padding: '6px 16px', borderRadius: '50px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
             Transmisión oficial de YouTube Live embebida en Student Hub

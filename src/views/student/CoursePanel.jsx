@@ -1,6 +1,7 @@
 import React from 'react';
 import GlassCard from '../../components/GlassCard';
-import { ArrowLeft, Play, Calendar, Video, FileText, CheckCircle, Circle } from 'lucide-react';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
+import { ArrowLeft, Calendar, Video, CheckCircle, Circle } from 'lucide-react';
 
 const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
   const getSessionStatusIcon = (status) => {
@@ -23,7 +24,7 @@ const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
         return <span className="glass-pill blue" style={{ padding: '4px 10px', fontSize: '11px', pointerEvents: 'none', animation: 'pulse-live 2s infinite' }}>En Vivo</span>;
       case 'Próxima':
       default:
-        return <span className="glass-pill" style={{ padding: '4px 10px', fontSize: '11px', pointerEvents: 'none', background: 'rgba(255,255,255,0.4)', color: '#4b5563' }}>Próximamente</span>;
+        return <span className="glass-pill" style={{ padding: '4px 10px', fontSize: '11px', pointerEvents: 'none', background: 'rgba(255,255,255,0.4)', color: '#4b5563' }}>Programada</span>;
     }
   };
 
@@ -65,10 +66,13 @@ const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
 
       {/* Sessions Syllabus List */}
       <div>
-        <h3 style={{ fontSize: '20px', marginBottom: '16px', fontWeight: 700 }}>Calendario del temario</h3>
+        <h3 style={{ fontSize: '20px', marginBottom: '6px', fontWeight: 700 }}>Calendario del temario</h3>
+        <p style={{ fontSize: '13px', color: '#4b5563', marginBottom: '18px' }}>
+          Inicio oficial: <strong>{OFFICIAL_COURSE_SCHEDULE.officialStartDateLabel}</strong> · Horario: <strong>{OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel}</strong> ({OFFICIAL_COURSE_SCHEDULE.timezoneLabel})
+        </p>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {settings.sessions.map((session, index) => {
+          {OFFICIAL_COURSE_SCHEDULE.sessions.map((session) => {
             const completed = isSessionCompleted(session.id);
             return (
               <GlassCard 
@@ -93,7 +97,7 @@ const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#6b7280' }}>
-                      {session.name} — {session.day}
+                      {session.name} — {session.fullDateLabel}
                     </span>
                     {getSessionStatusBadge(session.status)}
                     {completed && (
@@ -105,10 +109,10 @@ const CoursePanel = ({ course, settings, user, onBack, onSelectSession }) => {
                   <h4 style={{ fontSize: '18px', marginTop: '6px', marginBottom: '4px' }}>
                     {session.title}
                   </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#4b5563' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#4b5563', flexWrap: 'wrap' }}>
                     <Calendar size={14} />
                     <span>
-                      {session.date ? `${session.date} a las ${session.time}` : 'Fechas próximamente por confirmar'}
+                      {session.fullDateLabel} · {session.time} ({session.timezoneLabel})
                     </span>
                   </div>
                 </div>

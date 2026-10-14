@@ -3,6 +3,7 @@ import GlassCard from '../../components/GlassCard';
 import GlassPill from '../../components/GlassPill';
 import GlassSculpture from '../../components/GlassSculpture';
 import logoImg from '../../assets/logo-nobg.png';
+import { OFFICIAL_COURSE_SCHEDULE, getNextUpcomingSession } from '../../config/courseSchedule';
 import { 
   Home, BookOpen, Library, Calendar, Folder, Star, Brain, ArrowRight, LogOut, User 
 } from 'lucide-react';
@@ -17,13 +18,14 @@ const StudentDashboard = ({
   onSelectCourse, 
   onSelectSession 
 }) => {
-  // Find next session that is not finished
-  const nextSession = settings.sessions.find(s => s.status !== 'Finalizada') || settings.sessions[3];
+  const officialSessions = OFFICIAL_COURSE_SCHEDULE.sessions;
+  // Seleccionar la próxima sesión evaluando estado y horario oficial en America/Mexico_City
+  const nextSession = getNextUpcomingSession(officialSessions);
 
   // Dynamic real counts for Biblioteca (no hardcoded mock numbers)
-  const presentacionesCount = settings.sessions.filter(s => s.status === 'Finalizada' && s.presentationUrl && s.presentationUrl !== '#' && s.presentationUrl !== '').length;
-  const plantillasCount = settings.sessions.reduce((acc, s) => acc + (s.resources ? s.resources.filter(r => r.type === 'DOCX' || r.type === 'XLSX').length : 0), 0);
-  const grabacionesCount = settings.sessions.filter(s => s.youtubeUrl && s.youtubeUrl.trim() !== '').length;
+  const presentacionesCount = officialSessions.filter(s => s.status === 'Finalizada' && s.presentationUrl && s.presentationUrl !== '#' && s.presentationUrl !== '').length;
+  const plantillasCount = officialSessions.reduce((acc, s) => acc + (s.resources ? s.resources.filter(r => r.type === 'DOCX' || r.type === 'XLSX').length : 0), 0);
+  const grabacionesCount = officialSessions.filter(s => s.youtubeUrl && s.youtubeUrl.trim() !== '').length;
 
   const getCourseProgress = (courseId) => {
     const id = courseId || 'level-up';
@@ -181,11 +183,16 @@ const StudentDashboard = ({
             <GlassCard tint="blue" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '160px', padding: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <div style={{ fontSize: '13px', color: '#1e429f', fontWeight: 600 }}>Próxima sesión</div>
-                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginTop: '6px' }}>
-                    {nextSession.date ? `${nextSession.day} · ${nextSession.time}` : 'Fechas por confirmar'}
+                  <div style={{ fontSize: '13px', color: '#1e429f', fontWeight: 600 }}>
+                    Próxima sesión · {nextSession.name}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#4b5563', marginTop: '4px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginTop: '6px' }}>
+                    {nextSession.fullDateLabel || `${nextSession.day} ${nextSession.date}`}
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e429f', marginTop: '2px' }}>
+                    {nextSession.time} ({nextSession.timezoneLabel || OFFICIAL_COURSE_SCHEDULE.timezoneLabel})
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#4b5563', marginTop: '6px' }}>
                     {nextSession.title}
                   </div>
                 </div>
@@ -246,10 +253,15 @@ const StudentDashboard = ({
           <GlassCard tint="blue" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <span style={{ fontSize: '13px', color: '#1e429f', fontWeight: 600 }}>Próxima sesión</span>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: '8px', color: '#111827' }}>
-                  {nextSession.date ? `${nextSession.day} · ${nextSession.time}` : 'Fechas por confirmar'}
+                <span style={{ fontSize: '13px', color: '#1e429f', fontWeight: 600 }}>
+                  Próxima sesión · {nextSession.name}
+                </span>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, marginTop: '8px', color: '#111827', lineHeight: 1.3 }}>
+                  {nextSession.fullDateLabel || `${nextSession.day} ${nextSession.date}`}
                 </h3>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e429f', marginTop: '4px' }}>
+                  {nextSession.time} ({nextSession.timezoneLabel || OFFICIAL_COURSE_SCHEDULE.timezoneLabel})
+                </div>
               </div>
               <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(255,255,255,0.4)', color: '#3f83f8' }}>
                 <Calendar size={20} />
@@ -258,7 +270,7 @@ const StudentDashboard = ({
 
             <div>
               <div style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>{nextSession.title}</div>
-              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>Capacitación en vivo</div>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>Capacitación en vivo · 1h 30m</div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '15px' }}>

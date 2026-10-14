@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { getSettings } from '../../services/db';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
 import GlassCard from '../../components/GlassCard';
 import LegalModal from '../../components/LegalModal';
 import logoImg from '../../assets/logo-nobg.png';
-import { Calendar, Clock, Monitor, BookOpen, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
+import { Calendar, Clock, Monitor, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import './PublicLanding.css';
 
 const PublicLanding = ({ onNavigate, onEnterLogin }) => {
@@ -43,15 +44,6 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
     );
   }
 
-  // Format dates text
-  const renderDatesInfo = () => {
-    const hasDates = settings.sessions.some(s => s.date !== '');
-    if (!hasDates) {
-      return 'Fechas por confirmar · Próxima edición próximamente';
-    }
-    return 'Fechas programadas';
-  };
-
   return (
     <div className="fade-in public-landing-wrapper">
       
@@ -84,7 +76,7 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
       <div className="public-landing-hero-grid">
         <div className="public-landing-hero-content">
           <span className="glass-pill mint public-landing-pill-badge">
-            NUEVA EDICIÓN REGISTROS ABIERTOS
+            INICIO OFICIAL: LUNES 26 DE OCTUBRE DE 2026
           </span>
           <h1 className="public-landing-hero-title">
             LEVEL UP
@@ -170,6 +162,13 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
               <div style={{ fontSize: '13px', color: '#6b7280' }}>Capacitación total</div>
             </div>
           </div>
+
+          <div style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', background: 'rgba(255, 255, 255, 0.55)', border: '1px solid rgba(255, 255, 255, 0.8)', textAlign: 'center', fontSize: '13px', color: '#1f2937', lineHeight: 1.45 }}>
+            <div><strong>Inicio:</strong> {OFFICIAL_COURSE_SCHEDULE.officialStartDateLabel}</div>
+            <div style={{ color: '#1e429f', fontWeight: 600, marginTop: '2px' }}>
+              {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel} · {OFFICIAL_COURSE_SCHEDULE.timezoneLabel}
+            </div>
+          </div>
         </GlassCard>
       </div>
 
@@ -180,10 +179,10 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
             <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.8)', color: '#31c48d' }}>
               <Calendar size={22} />
             </div>
-            <h3 style={{ fontSize: '18px' }}>4 Sesiones</h3>
+            <h3 style={{ fontSize: '18px' }}>4 Sesiones en Vivo</h3>
           </div>
           <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.5 }}>
-            Diseñado en sesiones dinámicas de lunes, miércoles y viernes para una asimilación práctica.
+            Lunes 26, miércoles 28 y viernes 30 de octubre, y lunes 2 de noviembre de 2026.
           </p>
         </GlassCard>
 
@@ -192,10 +191,10 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
             <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.8)', color: '#3f83f8' }}>
               <Clock size={22} />
             </div>
-            <h3 style={{ fontSize: '18px' }}>1h 30m por sesión</h3>
+            <h3 style={{ fontSize: '18px' }}>7:00 PM a 8:30 PM</h3>
           </div>
           <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.5 }}>
-            Tiempo ideal enfocado al desarrollo de habilidades prácticas reales sin aburrirte.
+            1h 30m por sesión (hora de Ciudad de México), enfocadas al desarrollo de habilidades prácticas reales.
           </p>
         </GlassCard>
 
@@ -216,55 +215,34 @@ const PublicLanding = ({ onNavigate, onEnterLogin }) => {
       <div id="syllabus" className="public-landing-syllabus-section">
         <h2 className="public-landing-section-title">Estructura del Curso</h2>
         <p className="public-landing-section-subtitle">
-          {renderDatesInfo()}
+          Inicio oficial: {OFFICIAL_COURSE_SCHEDULE.officialStartDateLabel} · {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel} ({OFFICIAL_COURSE_SCHEDULE.timezoneLabel})
         </p>
 
         <div className="public-landing-sessions-list">
-          {(() => {
-            const OFFICIAL_SESSIONS = [
-              {
-                title: 'IA desde Cero: Entiende lo que Hay Detrás',
-                description: 'Qué es la IA, cómo funciona y qué puede hacer realmente.'
-              },
-              {
-                title: 'Habla con la IA: El Poder de los Prompts',
-                description: 'Ingeniería de prompts aplicada al estudio y trabajo.'
-              },
-              {
-                title: 'De Ideas a Creaciones: IA para Crear en Digital',
-                description: 'Imágenes, presentaciones y creatividad.'
-              },
-              {
-                title: 'Tu Próximo Paso: IA, Profesión y Proyecto Final',
-                description: 'Aplicación profesional, futuro de la IA y proyecto.'
-              }
-            ];
-            return settings.sessions.map((session, index) => {
-              const hasDateConfig = session.date !== '';
-              const officialInfo = OFFICIAL_SESSIONS[index] || { title: session.title, description: 'Duración: 1h 30m · Materiales e IA aplicados' };
-              return (
-                <GlassCard 
-                  key={session.id} 
-                  tint={index % 2 === 0 ? 'mint' : 'blue'}
-                  className="public-landing-session-card"
-                >
-                  <div>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: index % 2 === 0 ? '#14532d' : '#1e429f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      {session.name} — {session.day}
-                    </span>
-                    <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{officialInfo.title}</h3>
-                    <p style={{ fontSize: '14px', color: '#4b5563' }}>{officialInfo.description}</p>
-                  </div>
-                  
-                  <div className="glass-panel" style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>
-                      {hasDateConfig ? `${session.date} a las ${session.time}` : 'Fecha por confirmar'}
-                    </span>
-                  </div>
-                </GlassCard>
-              );
-            });
-          })()}
+          {OFFICIAL_COURSE_SCHEDULE.sessions.map((session, index) => (
+            <GlassCard
+              key={session.id}
+              tint={index % 2 === 0 ? 'mint' : 'blue'}
+              className="public-landing-session-card"
+            >
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: index % 2 === 0 ? '#14532d' : '#1e429f', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {session.name} — {session.day} {session.date}
+                </span>
+                <h3 style={{ fontSize: '20px', marginTop: '4px', marginBottom: '6px' }}>{session.title}</h3>
+                <p style={{ fontSize: '14px', color: '#4b5563' }}>{session.description}</p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.5)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.8)', textAlign: 'right' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                  {session.fullDateLabel}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e429f', marginTop: '2px' }}>
+                  {session.time} ({session.timezoneLabel})
+                </div>
+              </div>
+            </GlassCard>
+          ))}
         </div>
       </div>
 

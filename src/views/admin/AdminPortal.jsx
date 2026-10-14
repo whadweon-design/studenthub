@@ -3,6 +3,7 @@ import {
   getSettings, saveSettings, getUsers, getAdminUser, updateAdminUser
 } from '../../services/db';
 import { OFFICIAL_PAYMENT_CONFIG } from '../../config/paymentConfig';
+import { OFFICIAL_COURSE_SCHEDULE } from '../../config/courseSchedule';
 import { supabase } from '../../services/supabaseClient';
 import GlassCard from '../../components/GlassCard';
 import {
@@ -167,7 +168,7 @@ const AdminPortal = ({ onBack }) => {
       setWhatsappNumber(OFFICIAL_PAYMENT_CONFIG.whatsappDisplay);
       setCourseName(s.courseName);
       setCourseDescription(s.courseDescription);
-      setSessions(s.sessions);
+      setSessions(OFFICIAL_COURSE_SCHEDULE.sessions);
     }
   };
 
@@ -686,18 +687,41 @@ const AdminPortal = ({ onBack }) => {
       {/* Sessions Tab */}
       {activeTab === 'sessions' && (
         <form onSubmit={handleSaveSettings} className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 700 }}>Configuración de Sesiones</h3>
-            <button type="submit" className="glass-btn primary" style={{ padding: '10px 20px', fontSize: '14px' }}>
-              Guardar Cambios
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '20px', fontWeight: 700 }}>Calendario Oficial de Sesiones (Solo lectura)</h3>
+              <p style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
+                Inicio oficial: <strong>{OFFICIAL_COURSE_SCHEDULE.officialStartDateLabel}</strong> · Horario: <strong>{OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel} ({OFFICIAL_COURSE_SCHEDULE.timezoneLabel})</strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled
+              className="glass-btn secondary"
+              style={{ padding: '10px 18px', fontSize: '13px', opacity: 0.65, cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Lock size={15} />
+              <span>Edición deshabilitada (Calendario oficial centralizado)</span>
             </button>
           </div>
+
+          <GlassCard tint="blue" style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', color: '#1e429f' }}>
+              <Info size={22} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '14px', lineHeight: 1.5 }}>
+                <strong style={{ display: 'block', marginBottom: '4px', fontSize: '15px' }}>
+                  Fechas y horarios oficiales centralizados (Solo lectura)
+                </strong>
+                El calendario oficial de <strong>{OFFICIAL_COURSE_SCHEDULE.courseTitle}</strong> (4 sesiones en vivo de {OFFICIAL_COURSE_SCHEDULE.scheduleRangeLabel}, {OFFICIAL_COURSE_SCHEDULE.timezoneLabel}) se gestiona desde la configuración centralizada de la aplicación (<code>src/config/courseSchedule.js</code>) y no desde <code>localStorage</code>, garantizando que todos los dispositivos muestren exactamente las mismas fechas y horarios.
+              </div>
+            </div>
+          </GlassCard>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {sessions.map((session, index) => (
               <GlassCard key={session.id} tint={index % 2 === 0 ? 'mint' : 'blue'} style={{ padding: '24px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', textTransform: 'uppercase', color: '#111827' }}>
-                  {session.name} — {session.day} (Temario)
+                  {session.name} — {session.fullDateLabel || `${session.day} ${session.date}`} (Temario)
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
@@ -707,7 +731,10 @@ const AdminPortal = ({ onBack }) => {
                       type="text"
                       value={session.title}
                       onChange={(e) => handleSessionChange(index, 'title', e.target.value)}
+                      disabled
+                      readOnly
                       className="glass-input"
+                      style={{ opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                   <div>
@@ -715,8 +742,9 @@ const AdminPortal = ({ onBack }) => {
                     <select
                       value={session.status}
                       onChange={(e) => handleSessionChange(index, 'status', e.target.value)}
+                      disabled
                       className="glass-input"
-                      style={{ appearance: 'none' }}
+                      style={{ appearance: 'none', opacity: 0.75, cursor: 'not-allowed' }}
                     >
                       <option value="Próxima">Próxima (Aún no impartida)</option>
                       <option value="En vivo">En vivo (Impartiendo ahora)</option>
@@ -727,23 +755,27 @@ const AdminPortal = ({ onBack }) => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '20px', marginBottom: '15px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Fecha del directo</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Fecha oficial del directo</label>
                     <input
                       type="text"
-                      value={session.date}
+                      value={session.fullDateLabel || `${session.day} ${session.date}`}
                       onChange={(e) => handleSessionChange(index, 'date', e.target.value)}
-                      placeholder="Ej. Lunes 31 de Agosto"
+                      disabled
+                      readOnly
                       className="glass-input"
+                      style={{ opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Hora de la sesión</label>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: '#4b5563' }}>Horario oficial ({OFFICIAL_COURSE_SCHEDULE.timezoneLabel})</label>
                     <input
                       type="text"
-                      value={session.time}
+                      value={`${session.time} (${session.timezoneLabel || OFFICIAL_COURSE_SCHEDULE.timezoneLabel})`}
                       onChange={(e) => handleSessionChange(index, 'time', e.target.value)}
-                      placeholder="Ej. 7:00 PM"
+                      disabled
+                      readOnly
                       className="glass-input"
+                      style={{ opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                   <div>
@@ -752,8 +784,11 @@ const AdminPortal = ({ onBack }) => {
                       type="text"
                       value={session.liveUrl !== undefined ? session.liveUrl : (session.meetLink || '')}
                       onChange={(e) => handleSessionChange(index, 'liveUrl', e.target.value)}
+                      disabled
+                      readOnly
                       placeholder="https://www.youtube.com/watch?v=..."
                       className="glass-input"
+                      style={{ opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                 </div>
@@ -765,8 +800,11 @@ const AdminPortal = ({ onBack }) => {
                       type="text"
                       value={session.youtubeUrl}
                       onChange={(e) => handleSessionChange(index, 'youtubeUrl', e.target.value)}
+                      disabled
+                      readOnly
                       placeholder="https://www.youtube.com/watch?v=..."
                       className="glass-input"
+                      style={{ opacity: 0.75, cursor: 'not-allowed' }}
                     />
                   </div>
                 )}
